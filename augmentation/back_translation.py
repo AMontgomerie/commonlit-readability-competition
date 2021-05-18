@@ -62,7 +62,7 @@ def back_translate(texts):
 
 
 if __name__ == "__main__":
-    train = pd.read_csv("train.csv")
+    train = pd.read_csv("data/train.csv")
     back_translations = back_translate_all(train.excerpt.to_list())
     back_translations_df = pd.DataFrame({"translated_text": back_translations})
     back_translations_df.to_csv("fr_back_translations.csv", index=False)
