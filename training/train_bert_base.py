@@ -14,7 +14,7 @@ WEIGHT_DECAY = 0.4
 DROPOUT = 0.4
 
 if __name__ == "__main__":
-    data = pd.read_csv("data/train.csv")
+    data = pd.read_csv("../data/train.csv")
     tokenizer = BertTokenizerFast.from_pretrained(CHECKPOINT)
     train_set, test_set = train_test_split(
         data, test_size=0.2, random_state=RANDOM_SEED
