@@ -69,8 +69,8 @@ class CommonLitDataset(Dataset):
 
 
 def train(train_data, valid_data, model_type, tokenizer, scheduler_type="constant"):
-    train = CommonLitDataset(train_data.excerpt, train_data.target, tokenizer)
-    valid = CommonLitDataset(valid_data.excerpt, valid_data.target, tokenizer)
+    train = CommonLitDataset(train_data, tokenizer)
+    valid = CommonLitDataset(valid_data, tokenizer)
     train_loader = DataLoader(train, shuffle=True, batch_size=BATCH_SIZE)
     model = model_type.from_pretrained(
         CHECKPOINT,
