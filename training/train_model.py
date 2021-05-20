@@ -1,10 +1,9 @@
-import pandas as pd
+import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import (
     BertTokenizerFast,
-    BertForSequenceClassification,
     AdamW,
     get_constant_schedule_with_warmup,
     get_linear_schedule_with_warmup,
@@ -27,34 +26,52 @@ torch.manual_seed(RANDOM_SEED)
 
 
 class CommonLitDataset(Dataset):
-    def __init__(self, texts, targets, tokenizer):
-        self.texts = texts.to_list()
-        self.targets = targets.to_list()
+    def __init__(self, data, tokenizer, sample_targets=False):
+        self.texts = data.excerpt.to_list()
+        self.targets = data.target.to_list()
+        self.standard_errors = data.standard_error.to_list()
         self.tokenizer = tokenizer
+        self.sample_targets = sample_targets
 
     def __len__(self):
         return len(self.texts)
 
     def __getitem__(self, index):
         text = self.texts[index]
-        encoded_inputs = self.tokenizer(
-            text,
-            max_length=330,
-            padding="max_length",
-            return_tensors="pt",
-            return_token_type_ids=False,
-        )
+        encoded_inputs = self.encode_text(text)
+        target = self.targets[index]
+
+        if self.sample_targets:
+            std_error = self.standard_errors[index]
+            target = self.add_target_sampling(target, std_error)
+
         encoded_inputs["input_ids"] = torch.squeeze(encoded_inputs["input_ids"]).to(
             DEVICE
         )
         encoded_inputs["attention_mask"] = torch.squeeze(
             encoded_inputs["attention_mask"]
         ).to(DEVICE)
-        encoded_inputs["labels"] = torch.tensor(self.targets[index]).to(DEVICE)
+        encoded_inputs["labels"] = torch.tensor([target]).to(DEVICE)
         return encoded_inputs
 
+    def encode_text(self, text):
+        return self.tokenizer(
+            text,
+            max_length=330,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt",
+            return_token_type_ids=False,
+        )
 
-def train(train, valid, model_type, tokenizer, scheduler_type="constant"):
+    def add_target_sampling(self, target, std):
+        return np.random.normal(target, std)
+
+
+def train(train_data, valid_data, model_type, tokenizer, scheduler_type="constant"):
+    train = CommonLitDataset(train_data.excerpt, train_data.target, tokenizer)
+    valid = CommonLitDataset(valid_data.excerpt, valid_data.target, tokenizer)
+    train_loader = DataLoader(train, shuffle=True, batch_size=BATCH_SIZE)
     model = model_type.from_pretrained(
         CHECKPOINT,
         num_labels=1,
@@ -62,7 +79,6 @@ def train(train, valid, model_type, tokenizer, scheduler_type="constant"):
         attention_probs_dropout_prob=DROPOUT,
     ).to(DEVICE)
     model.train()
-    train_loader = DataLoader(train, shuffle=True, batch_size=BATCH_SIZE)
     criterion = nn.MSELoss()
     optimizer = AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
     scheduler = get_scheduler(optimizer, scheduler_type, len(train_loader) * EPOCHS)
