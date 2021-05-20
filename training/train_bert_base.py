@@ -2,7 +2,7 @@ import pandas as pd
 from transformers import BertTokenizerFast, BertForSequenceClassification, AdamW
 from sklearn.model_selection import train_test_split
 
-from training.train import CommonLitDataset, train
+from train_model import CommonLitDataset, train
 
 LEARNING_RATE = 1e-5
 EPOCHS = 8
