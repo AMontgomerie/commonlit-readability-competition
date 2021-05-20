@@ -19,8 +19,6 @@ if __name__ == "__main__":
     train_set, test_set = train_test_split(
         data, test_size=0.2, random_state=RANDOM_SEED
     )
-    train_set = CommonLitDataset(train_set.excerpt, train_set.target)
-    test_set = CommonLitDataset(test_set.excerpt, test_set.target)
     train(
         train_set,
         test_set,
