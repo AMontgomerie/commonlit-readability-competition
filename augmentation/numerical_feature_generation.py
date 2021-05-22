@@ -7,8 +7,6 @@ import re
 import string
 from textstat import textstat
 
-nlp = en_core_web_sm.load()
-nltk.download("stopwords")
 STOPWORDS = stopwords.words("english")
 PUNCTUATION = list(string.punctuation)
 POS_TAGS = [
@@ -33,6 +31,8 @@ POS_TAGS = [
     "SPACE",
 ]
 RANDOM_SEED = 0
+
+spacy_pipeline = en_core_web_sm.load()
 
 
 def generate_features(data):
@@ -62,8 +62,12 @@ def preprocess_text(text):
         "difficult_words": textstat.difficult_words(simplified_text),
         "linsear_write_formula": textstat.linsear_write_formula(simplified_text),
         "gunning_fog": textstat.gunning_fog(simplified_text),
-        "text_standard": textstat.text_standard(simplified_text, float_output=True),
+        "text_standard_cont": textstat.text_standard(
+            simplified_text, float_output=True
+        ),
+        "text_standard_cat": get_text_standard_cat(simplified_text),
         "mean_parse_tree_depth": get_mean_parse_tree_depth(text),
+        "max_parse_tree_depth": get_max_parse_tree_depth(text),
         "mean_ents_per_sentence": get_mean_ents_per_sentence(text),
         "total_ents": get_total_ents(text),
         "total_chars": get_num_chars(text),
@@ -76,6 +80,7 @@ def preprocess_text(text):
         "nonstop_token_proportion": get_nonstop_proportion(text),
     }
 
+    features.update(get_total_pos_tags(text))
     features.update(get_mean_pos_tags(text))
 
     return features
@@ -95,10 +100,25 @@ def simplify_punctuation(text):
     return text
 
 
+def get_text_standard_cat(text):
+    text_standard_string = textstat.text_standard(text, float_output=False)
+    return extract_numerical_grade(text_standard_string)
+
+
+def extract_numerical_grade(grade_string):
+    return int(re.search(r"-?\d+", grade_string).group(0))
+
+
+def get_max_parse_tree_depth(text):
+    doc = spacy_pipeline(text)
+    depths = get_parse_tree_depths(doc)
+    return max(depths)
+
+
 def get_mean_parse_tree_depth(text):
     sentences = text.split(".")
     depths = []
-    for doc in list(nlp.pipe(sentences)):
+    for doc in list(spacy_pipeline.pipe(sentences)):
         depths += get_parse_tree_depths(doc)
     return np.mean(depths)
 
@@ -120,9 +140,15 @@ def get_mean_pos_tags(text):
     return mean_pos_tags
 
 
+def get_total_pos_tags(text):
+    doc = spacy_pipeline(text)
+    tag_counts = get_pos_tag_counts(doc)
+    return tag_counts
+
+
 def make_pos_tag_count_lists(sentences):
     sentence_counts = {}
-    for doc in list(nlp.pipe(sentences)):
+    for doc in list(spacy_pipeline.pipe(sentences)):
         pos_counts = get_pos_tag_counts(doc)
         for key in pos_counts:
             if key in sentence_counts:
@@ -154,7 +180,7 @@ def calculate_mean_per_tag(counts, num_sentences):
 
 
 def get_total_ents(text):
-    return len(nlp(text).doc.ents)
+    return len(spacy_pipeline(text).doc.ents)
 
 
 def get_mean_ents_per_sentence(text):
