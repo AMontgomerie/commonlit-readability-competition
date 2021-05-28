@@ -92,29 +92,43 @@ def parse_args():
     return parser.parse_args()
 
 
-def train(fold: int, train_set: Dataset, valid_set: Dataset, params) -> PreTrainedModel:
+def build_config(params):
+    return {
+        "attention_dropout": params.attention_dropout,
+        "batch_size": params.batch_size,
+        "epochs": params.epochs,
+        "hidden_dropout": params.hidden_dropout,
+        "learning_rate": params.learning_rate,
+        "warmup_steps": params.warmup_steps,
+        "weight_decay": params.weight_decay,
+    }
+
+
+def train(fold: int, train_set: Dataset, valid_set: Dataset, config) -> PreTrainedModel:
     model = RobertaForSequenceClassification.from_pretrained(
         CHECKPOINT,
         num_labels=1,
-        hidden_dropout_prob=params.hidden_dropout,
-        attention_probs_dropout_prob=params.attention_dropout,
+        hidden_dropout_prob=config["hidden_dropout"],
+        attention_probs_dropout_prob=config["attention_dropout"],
     ).to(DEVICE)
     model.train()
-    train_loader = DataLoader(train_set, shuffle=True, batch_size=params.batch_size)
+    train_loader = DataLoader(train_set, shuffle=True, batch_size=config["batch_size"])
     criterion = nn.MSELoss()
     optimizer = AdamW(
-        model.parameters(), lr=params.learning_rate, weight_decay=params.weight_decay
+        model.parameters(),
+        lr=config["learning_rate"],
+        weight_decay=config["weight_decay"],
     )
     scheduler = get_linear_schedule_with_warmup(
         optimizer,
-        num_warmup_steps=params.warmup_steps,
-        num_training_steps=len(train_loader) * params.epochs,
+        num_warmup_steps=config["warmup_steps"],
+        num_training_steps=len(train_loader) * config["epochs"],
     )
 
     print(f"Training {CHECKPOINT} fold {fold} with:")
-    print(params)
+    print(config)
 
-    for epoch in range(1, params.epochs + 1):
+    for epoch in range(1, config["epochs"] + 1):
 
         total_rmse = 0
 
@@ -129,7 +143,7 @@ def train(fold: int, train_set: Dataset, valid_set: Dataset, params) -> PreTrain
 
         current_steps = (epoch - 1) * len(train_loader) + step
         train_rmse = total_rmse / len(train_loader)
-        valid_rmse = evaluate(model, valid_set, params.batch_size)
+        valid_rmse = evaluate(model, valid_set, config["batch_size"])
         print(
             f"Fold: {fold} | Step: {current_steps} Epoch: {epoch} | Train RMSE: {train_rmse} | Valid RMSE: {valid_rmse}"
         )
@@ -161,19 +175,18 @@ def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
     tokenizer.save_pretrained(path)
 
 
-def train_cv() -> float:
+def train_cv(config) -> float:
     tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
     scores = []
-    hyperparams = parse_args()
 
     for fold in range(len(data.kfold.unique())):
         train_data = data[data.kfold != fold]
         valid_data = data[data.kfold == fold]
         train_set = CommonLitDataset(train_data.excerpt, train_data.target, tokenizer)
         valid_set = CommonLitDataset(valid_data.excerpt, valid_data.target, tokenizer)
-        trained_model = train(fold, train_set, valid_set, hyperparams)
+        trained_model = train(fold, train_set, valid_set, config)
         rmse = evaluate(trained_model, valid_set)
         save(trained_model, tokenizer, fold)
         scores.append(rmse)
@@ -185,5 +198,7 @@ def train_cv() -> float:
 
 
 if __name__ == "__main__":
-    cv_score = train_cv()
+    params = parse_args()
+    config = build_config(params)
+    cv_score = train_cv(config)
     print(f"CV score: {cv_score}")
