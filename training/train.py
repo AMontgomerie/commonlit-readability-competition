@@ -184,7 +184,7 @@ def train_cv(config) -> float:
         train_set = CommonLitDataset(data[data.kfold != fold], tokenizer)
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
-        rmse = evaluate(trained_model, valid_set)
+        rmse = evaluate(trained_model, valid_set, config["batch_size"])
         save(trained_model, tokenizer, fold)
         scores.append(rmse)
         torch.cuda.empty_cache()
