@@ -26,8 +26,8 @@ torch.manual_seed(RANDOM_SEED)
 
 class CommonLitDataset(Dataset):
     def __init__(self, data: pd.DataFrame, tokenizer: PreTrainedTokenizerFast) -> None:
-        self.texts = data.texts.to_list()
-        self.targets = data.targets.to_list()
+        self.texts = data.excerpt.to_list()
+        self.targets = data.target.to_list()
         self.tokenizer = tokenizer
 
     def __len__(self) -> int:
