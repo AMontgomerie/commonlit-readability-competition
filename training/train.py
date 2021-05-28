@@ -25,11 +25,9 @@ torch.manual_seed(RANDOM_SEED)
 
 
 class CommonLitDataset(Dataset):
-    def __init__(
-        self, texts: List[str], targets: List[float], tokenizer: PreTrainedTokenizerFast
-    ) -> None:
-        self.texts = texts.to_list()
-        self.targets = targets.to_list()
+    def __init__(self, data: pd.DataFrame, tokenizer: PreTrainedTokenizerFast) -> None:
+        self.texts = data.texts.to_list()
+        self.targets = data.targets.to_list()
         self.tokenizer = tokenizer
 
     def __len__(self) -> int:
@@ -125,9 +123,6 @@ def train(fold: int, train_set: Dataset, valid_set: Dataset, config) -> PreTrain
         num_training_steps=len(train_loader) * config["epochs"],
     )
 
-    print(f"Training {CHECKPOINT} fold {fold} with:")
-    print(config)
-
     for epoch in range(1, config["epochs"] + 1):
 
         total_rmse = 0
@@ -179,13 +174,15 @@ def train_cv(config) -> float:
     tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
+    folds = len(data.kfold.unique())
     scores = []
 
-    for fold in range(len(data.kfold.unique())):
-        train_data = data[data.kfold != fold]
-        valid_data = data[data.kfold == fold]
-        train_set = CommonLitDataset(train_data.excerpt, train_data.target, tokenizer)
-        valid_set = CommonLitDataset(valid_data.excerpt, valid_data.target, tokenizer)
+    print(f"Training {CHECKPOINT} for {folds} folds with:")
+    print(config)
+
+    for fold in range(folds):
+        train_set = CommonLitDataset(data[data.kfold != fold], tokenizer)
+        valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
         rmse = evaluate(trained_model, valid_set)
         save(trained_model, tokenizer, fold)
