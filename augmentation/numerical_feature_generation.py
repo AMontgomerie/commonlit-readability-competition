@@ -159,13 +159,10 @@ def make_pos_tag_count_lists(sentences):
 
 
 def get_pos_tag_counts(doc):
-    pos_counts = {}
-    pos_tags = [token.pos_ for token in doc]
+    pos_counts = {tag.lower(): 0 for tag in POS_TAGS}
+    pos_tags = [token.pos_.lower() for token in doc]
     for tag in pos_tags:
-        if tag in pos_counts:
-            pos_counts[tag] += 1
-        else:
-            pos_counts[tag] = 1
+        pos_counts[tag] += 1
     return pos_counts
 
 
