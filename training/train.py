@@ -1,5 +1,6 @@
 import argparse
 import gc
+import os
 import pandas as pd
 import torch
 from torch import nn
@@ -17,6 +18,7 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
 
 CHECKPOINT = "roberta-large"
+OUTPUT_DIR = "output"
 RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
 torch.manual_seed(RANDOM_SEED)
@@ -154,14 +156,14 @@ def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
 
 
 def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
-    path = f"./output_{fold}"
+    path = os.path.join(OUTPUT_DIR, f"model_{fold}")
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
 
 
 def train_cv() -> float:
     tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
-    data = pd.read_csv("data/train_folds.csv")
+    data = pd.read_csv(os.path.join("data", "train_folds.csv"))
     scores = []
     hyperparams = parse_args()
 
