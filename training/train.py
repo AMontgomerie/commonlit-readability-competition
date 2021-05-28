@@ -158,15 +158,15 @@ def train(
     return model
 
 
+@torch.no_grad()
 def evaluate(model: PreTrainedModel, data: Dataset, batch_size) -> float:
     model.eval()
     data_loader = DataLoader(data, shuffle=False, batch_size=batch_size)
     total_rmse = 0
 
-    with torch.no_grad():
-        for batch in data_loader:
-            output = model(**batch)
-            total_rmse += compute_rmse(batch["labels"], output.logits.detach())
+    for batch in data_loader:
+        output = model(**batch)
+        total_rmse += compute_rmse(batch["labels"], output.logits.detach())
 
     return total_rmse / len(data_loader)
 
