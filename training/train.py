@@ -13,7 +13,7 @@ from transformers import (
     RobertaForSequenceClassification,
     RobertaTokenizerFast,
 )
-from typing import List, Dict
+from typing import Mapping
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
 
@@ -22,6 +22,16 @@ OUTPUT_DIR = "output"
 RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
 torch.manual_seed(RANDOM_SEED)
+
+DEFAULT_CONFIG = {
+    "attention_dropout": 0.2,
+    "batch_size": 8,
+    "epochs": 10,
+    "hidden_dropout": 0.2,
+    "learning_rate": 1e-5,
+    "warmup_steps": 150,
+    "weight_decay": 0.1,
+}
 
 
 class CommonLitDataset(Dataset):
@@ -33,7 +43,7 @@ class CommonLitDataset(Dataset):
     def __len__(self) -> int:
         return len(self.texts)
 
-    def __getitem__(self, index: int) -> Dict[str, torch.tensor]:
+    def __getitem__(self, index: int) -> Mapping[str, torch.tensor]:
         text = self.texts[index]
         encoded_inputs = self.tokenizer(
             text,
@@ -102,7 +112,9 @@ def build_config(params):
     }
 
 
-def train(fold: int, train_set: Dataset, valid_set: Dataset, config) -> PreTrainedModel:
+def train(
+    fold: int, train_set: Dataset, valid_set: Dataset, config: Mapping = DEFAULT_CONFIG
+) -> PreTrainedModel:
     model = RobertaForSequenceClassification.from_pretrained(
         CHECKPOINT,
         num_labels=1,
