@@ -163,7 +163,8 @@ def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
 
 def train_cv() -> float:
     tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
-    data = pd.read_csv(os.path.join("data", "train_folds.csv"))
+    path = os.path.join(os.path.dirname(__file__), "data", "train_folds.csv")
+    data = pd.read_csv(path)
     scores = []
     hyperparams = parse_args()
 
