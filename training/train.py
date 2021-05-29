@@ -113,7 +113,7 @@ def build_config(params):
 
 
 def train(
-    fold: int, train_set: Dataset, valid_set: Dataset, config: Mapping = DEFAULT_CONFIG
+    fold: int, train_set: Dataset, valid_set: Dataset, config: Mapping
 ) -> PreTrainedModel:
     model = RobertaForSequenceClassification.from_pretrained(
         CHECKPOINT,
@@ -177,12 +177,12 @@ def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
 
 
 def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
-    path = os.path.join("./", OUTPUT_DIR, f"model_{fold}")
+    path = os.path.join("/", OUTPUT_DIR, f"model_{fold}")
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
 
 
-def train_cv(config) -> float:
+def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
