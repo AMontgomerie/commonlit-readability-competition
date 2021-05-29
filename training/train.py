@@ -177,7 +177,7 @@ def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
 
 
 def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
-    path = os.path.join(OUTPUT_DIR, f"model_{fold}")
+    path = os.path.join("./", OUTPUT_DIR, f"model_{fold}")
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
 
