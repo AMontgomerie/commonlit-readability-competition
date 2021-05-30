@@ -127,7 +127,7 @@ def parse_args():
         default=0.1,
         help="the rate of weight decay in AdamW",
     )
-    parser.set_defaults(feature=False)
+    parser.set_defaults(target_sampling=False)
     return parser.parse_args()
 
 
