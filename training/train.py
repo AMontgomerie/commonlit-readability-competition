@@ -226,7 +226,9 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
 
     for fold in range(folds):
         train_set = CommonLitDataset(
-            data[data.kfold != fold], tokenizer, sample_targets=config.target_sampling
+            data[data.kfold != fold],
+            tokenizer,
+            sample_targets=config["target_sampling"],
         )
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
