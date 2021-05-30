@@ -139,6 +139,7 @@ def build_config(params):
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
         "save_path": params.save_path,
+        "target_sampling": params.target_sampling,
         "warmup_steps": params.warmup_steps,
         "weight_decay": params.weight_decay,
     }
