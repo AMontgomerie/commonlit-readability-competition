@@ -19,7 +19,6 @@ from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
 
 CHECKPOINT = "roberta-large"
-OUTPUT_DIR = "output"
 RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
 torch.manual_seed(RANDOM_SEED)
@@ -209,8 +208,13 @@ def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
     return rmse.item()
 
 
-def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
-    path = os.path.join(OUTPUT_DIR, f"model_{fold}")
+def save(
+    model: PreTrainedModel,
+    tokenizer: PreTrainedTokenizerFast,
+    fold: int,
+    output_dir: str = "output",
+):
+    path = os.path.join(output_dir, f"model_{fold}")
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
 
@@ -234,7 +238,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
         rmse = evaluate(trained_model, valid_set, config["batch_size"])
-        save(config["save_path"], trained_model, tokenizer, fold)
+        save(trained_model, tokenizer, fold, output_dir=config["save_path"])
         scores.append(rmse)
         torch.cuda.empty_cache()
         del trained_model
