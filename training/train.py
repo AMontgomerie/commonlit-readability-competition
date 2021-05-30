@@ -29,6 +29,7 @@ DEFAULT_CONFIG = {
     "epochs": 10,
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
+    "save_path": "output",
     "warmup_steps": 150,
     "weight_decay": 0.1,
 }
@@ -86,6 +87,12 @@ def parse_args():
         "--learning_rate", type=float, default=1e-5, help="the max learning rate"
     )
     parser.add_argument(
+        "--save_path",
+        type=str,
+        default="output",
+        help="where to save the trained models",
+    )
+    parser.add_argument(
         "--warmup_steps",
         type=int,
         default=150,
@@ -107,6 +114,7 @@ def build_config(params):
         "epochs": params.epochs,
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
+        "save_path": params.save_path,
         "warmup_steps": params.warmup_steps,
         "weight_decay": params.weight_decay,
     }
@@ -177,7 +185,7 @@ def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
 
 
 def save(model: PreTrainedModel, tokenizer: PreTrainedTokenizerFast, fold: int):
-    path = os.path.join("/", OUTPUT_DIR, f"model_{fold}")
+    path = os.path.join(OUTPUT_DIR, f"model_{fold}")
     model.save_pretrained(path)
     tokenizer.save_pretrained(path)
 
@@ -197,7 +205,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
         rmse = evaluate(trained_model, valid_set, config["batch_size"])
-        save(trained_model, tokenizer, fold)
+        save(config["save_path"], trained_model, tokenizer, fold)
         scores.append(rmse)
         torch.cuda.empty_cache()
         del trained_model
