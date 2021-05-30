@@ -1,6 +1,7 @@
 import argparse
 import gc
 import os
+import numpy as np
 import pandas as pd
 import torch
 from torch import nn
@@ -32,14 +33,22 @@ DEFAULT_CONFIG = {
     "save_path": "output",
     "warmup_steps": 150,
     "weight_decay": 0.1,
+    "target_sampling": False,
 }
 
 
 class CommonLitDataset(Dataset):
-    def __init__(self, data: pd.DataFrame, tokenizer: PreTrainedTokenizerFast) -> None:
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        tokenizer: PreTrainedTokenizerFast,
+        sample_targets=False,
+    ) -> None:
         self.texts = data.excerpt.to_list()
         self.targets = data.target.to_list()
         self.tokenizer = tokenizer
+        self.standard_errors = data.standard_error.to_list()
+        self.sample_targets = sample_targets
 
     def __len__(self) -> int:
         return len(self.texts)
@@ -53,14 +62,25 @@ class CommonLitDataset(Dataset):
             return_tensors="pt",
             return_token_type_ids=False,
         )
+
         encoded_inputs["input_ids"] = torch.squeeze(encoded_inputs["input_ids"]).to(
             DEVICE
         )
         encoded_inputs["attention_mask"] = torch.squeeze(
             encoded_inputs["attention_mask"]
         ).to(DEVICE)
-        encoded_inputs["labels"] = torch.tensor(self.targets[index]).to(DEVICE)
+
+        target = self.targets[index]
+
+        if self.sample_targets:
+            std_error = self.standard_errors[index]
+            target = self.add_target_sampling(target, std_error)
+
+        encoded_inputs["labels"] = torch.tensor(target).to(DEVICE)
         return encoded_inputs
+
+    def add_target_sampling(self, target, std):
+        return np.random.normal(target, std)
 
 
 def parse_args():
@@ -93,6 +113,9 @@ def parse_args():
         help="where to save the trained models",
     )
     parser.add_argument(
+        "--target_sampling", dest="target_sampling", action="store_true"
+    )
+    parser.add_argument(
         "--warmup_steps",
         type=int,
         default=150,
@@ -104,6 +127,7 @@ def parse_args():
         default=0.1,
         help="the rate of weight decay in AdamW",
     )
+    parser.set_defaults(feature=False)
     return parser.parse_args()
 
 
@@ -201,7 +225,9 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     print(config)
 
     for fold in range(folds):
-        train_set = CommonLitDataset(data[data.kfold != fold], tokenizer)
+        train_set = CommonLitDataset(
+            data[data.kfold != fold], tokenizer, sample_targets=config.target_sampling
+        )
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
         rmse = evaluate(trained_model, valid_set, config["batch_size"])
