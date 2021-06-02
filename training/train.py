@@ -227,14 +227,14 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     if "folds" in config:
         folds = config["folds"]
     else:
-        folds = len(data.kfold.unique())
+        folds = data.kfold.unique()
 
     scores = []
 
     print(f"Training {CHECKPOINT} for {folds} folds with:")
     print(config)
 
-    for fold in range(folds):
+    for fold in folds:
         train_set = CommonLitDataset(
             data[data.kfold != fold],
             tokenizer,
