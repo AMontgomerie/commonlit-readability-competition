@@ -223,7 +223,12 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
-    folds = len(data.kfold.unique())
+
+    if "folds" in config:
+        folds = config["folds"]
+    else:
+        folds = len(data.kfold.unique())
+
     scores = []
 
     print(f"Training {CHECKPOINT} for {folds} folds with:")
