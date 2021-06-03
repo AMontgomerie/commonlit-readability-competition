@@ -177,7 +177,7 @@ def train(
 
         for step, batch in enumerate(train_loader):
             optimizer.zero_grad()
-            output = model(**batch)
+            output = model(batch["input_ids"], batch["attention_mask"])
             loss = torch.sqrt(criterion(torch.squeeze(output.logits), batch["labels"]))
             loss.backward()
             optimizer.step()
@@ -203,7 +203,7 @@ def evaluate(
     total_rmse = 0
 
     for batch in data_loader:
-        output = model(**batch)
+        output = model(batch["input_ids"], batch["attention_mask"])
         total_rmse += compute_rmse(batch["labels"], output.logits.detach())
 
     return total_rmse / len(data_loader)
