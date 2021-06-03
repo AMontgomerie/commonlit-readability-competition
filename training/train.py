@@ -8,17 +8,14 @@ from torch import nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import (
     AdamW,
+    AutoTokenizer,
+    AutoModelForSequenceClassification,
     get_linear_schedule_with_warmup,
-    PreTrainedModel,
-    PreTrainedTokenizerFast,
-    RobertaForSequenceClassification,
-    RobertaTokenizerFast,
 )
 from typing import Mapping
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import KFold
 
-CHECKPOINT = "roberta-large"
 RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
 torch.manual_seed(RANDOM_SEED)
@@ -26,6 +23,7 @@ torch.manual_seed(RANDOM_SEED)
 DEFAULT_CONFIG = {
     "attention_dropout": 0.2,
     "batch_size": 8,
+    "checkpoint": "roberta-large",
     "epochs": 10,
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
@@ -40,7 +38,7 @@ class CommonLitDataset(Dataset):
     def __init__(
         self,
         data: pd.DataFrame,
-        tokenizer: PreTrainedTokenizerFast,
+        tokenizer: AutoTokenizer,
         sample_targets=False,
     ) -> None:
         self.texts = data.excerpt.to_list()
@@ -92,6 +90,12 @@ def parse_args():
     )
     parser.add_argument(
         "--batch_size", type=int, default=8, help="the number of examples per minibatch"
+    )
+    parser.add_argument(
+        "--checkpoint",
+        type=str,
+        default="roberta-large",
+        help="which pretrained model and tokenizer to use",
     )
     parser.add_argument(
         "--epochs", type=int, default=10, help="the number of epochs to run for"
@@ -146,9 +150,9 @@ def build_config(params):
 
 def train(
     fold: int, train_set: Dataset, valid_set: Dataset, config: Mapping
-) -> PreTrainedModel:
-    model = RobertaForSequenceClassification.from_pretrained(
-        CHECKPOINT,
+) -> AutoModelForSequenceClassification:
+    model = AutoModelForSequenceClassification.from_pretrained(
+        config["checkpoint"],
         num_labels=1,
         hidden_dropout_prob=config["hidden_dropout"],
         attention_probs_dropout_prob=config["attention_dropout"],
@@ -191,7 +195,9 @@ def train(
 
 
 @torch.no_grad()
-def evaluate(model: PreTrainedModel, data: Dataset, batch_size) -> float:
+def evaluate(
+    model: AutoModelForSequenceClassification, data: Dataset, batch_size
+) -> float:
     model.eval()
     data_loader = DataLoader(data, shuffle=False, batch_size=batch_size)
     total_rmse = 0
@@ -209,8 +215,8 @@ def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
 
 
 def save(
-    model: PreTrainedModel,
-    tokenizer: PreTrainedTokenizerFast,
+    model: AutoModelForSequenceClassification,
+    tokenizer: AutoTokenizer,
     fold: int,
     output_dir: str = "output",
 ):
@@ -220,7 +226,7 @@ def save(
 
 
 def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
-    tokenizer = RobertaTokenizerFast.from_pretrained(CHECKPOINT)
+    tokenizer = AutoTokenizer.from_pretrained(config["checkpoint"])
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
 
@@ -231,7 +237,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
 
     scores = []
 
-    print(f"Training {CHECKPOINT} for {folds} folds with:")
+    print(f"Training {config['checkpoint']} for {folds} folds with:")
     print(config)
 
     for fold in folds:
