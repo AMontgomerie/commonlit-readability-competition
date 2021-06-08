@@ -10,6 +10,8 @@ from transformers import (
     AdamW,
     AutoTokenizer,
     AutoModelForSequenceClassification,
+    get_constant_schedule_with_warmup,
+    get_cosine_schedule_with_warmup,
     get_linear_schedule_with_warmup,
 )
 from typing import Mapping
@@ -28,9 +30,10 @@ DEFAULT_CONFIG = {
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
     "save_path": "output",
+    "scheduler": "linear",
+    "target_sampling": False,
     "warmup_steps": 150,
     "weight_decay": 0.1,
-    "target_sampling": False,
 }
 
 
@@ -116,6 +119,12 @@ def parse_args():
         help="where to save the trained models",
     )
     parser.add_argument(
+        "--scheduler",
+        type=str,
+        default="linear",
+        help="choose a scheduler from [constant, linear, cosine]",
+    )
+    parser.add_argument(
         "--target_sampling", dest="target_sampling", action="store_true"
     )
     parser.add_argument(
@@ -138,10 +147,12 @@ def build_config(params):
     return {
         "attention_dropout": params.attention_dropout,
         "batch_size": params.batch_size,
+        "checkpoint": params.checkpoint,
         "epochs": params.epochs,
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
         "save_path": params.save_path,
+        "scheduler": params.scheduler,
         "target_sampling": params.target_sampling,
         "warmup_steps": params.warmup_steps,
         "weight_decay": params.weight_decay,
@@ -165,10 +176,11 @@ def train(
         lr=config["learning_rate"],
         weight_decay=config["weight_decay"],
     )
-    scheduler = get_linear_schedule_with_warmup(
+    scheduler = get_scheduler(
+        config["scheduler"],
         optimizer,
-        num_warmup_steps=config["warmup_steps"],
-        num_training_steps=len(train_loader) * config["epochs"],
+        warmup_steps=config["warmup_steps"],
+        total_steps=len(train_loader) * config["epochs"],
     )
 
     for epoch in range(1, config["epochs"] + 1):
@@ -192,6 +204,28 @@ def train(
         )
 
     return model
+
+
+def get_scheduler(scheduler_type, optimizer, warmup_steps, total_steps):
+    if scheduler_type == "constant":
+        return get_constant_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=warmup_steps,
+        )
+    elif scheduler_type == "linear":
+        return get_linear_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=total_steps,
+        )
+    elif scheduler_type == "cosine":
+        return get_cosine_schedule_with_warmup(
+            optimizer,
+            num_warmup_steps=warmup_steps,
+            num_training_steps=total_steps,
+        )
+    else:
+        raise ValueError(f"{scheduler_type} is not an available scheduler type.")
 
 
 @torch.no_grad()
@@ -237,7 +271,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
 
     scores = []
 
-    print(f"Training {config['checkpoint']} for {folds} folds with:")
+    print(f"Training {config['checkpoint']} for {len(folds)} folds with:")
     print(config)
 
     for fold in folds:
