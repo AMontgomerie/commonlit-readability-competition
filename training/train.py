@@ -211,6 +211,7 @@ def train(
             if current_steps != 0 and current_steps % config["eval_steps"] == 0:
                 train_rmse = total_rmse / config["eval_steps"]
                 valid_rmse = evaluate(model, valid_set, config["batch_size"])
+                total_rmse = 0
 
                 if valid_rmse < best_rmse:
                     save(
