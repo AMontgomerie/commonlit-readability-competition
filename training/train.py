@@ -209,6 +209,7 @@ def train(
 
             saved = False
             if current_steps != 0 and current_steps % config["eval_steps"] == 0:
+                train_rmse = total_rmse / len(train_loader)
                 valid_rmse = evaluate(model, valid_set, config["batch_size"])
 
                 if valid_rmse < best_rmse:
@@ -227,10 +228,7 @@ def train(
                     f"{'Model saved' if saved else ''}"
                 )
 
-        train_rmse = total_rmse / len(train_loader)
-        valid_rmse = evaluate(model, valid_set, config["batch_size"])
-
-    return model
+    return model, best_rmse
 
 
 def get_scheduler(scheduler_type, optimizer, warmup_steps, total_steps):
@@ -308,9 +306,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
             sample_targets=config["target_sampling"],
         )
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
-        trained_model = train(fold, train_set, valid_set, config)
-        rmse = evaluate(trained_model, valid_set, config["batch_size"])
-        # save(trained_model, tokenizer, fold, output_dir=config["save_path"])
+        trained_model, rmse = train(fold, train_set, valid_set, config)
         scores.append(rmse)
         torch.cuda.empty_cache()
         del trained_model
