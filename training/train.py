@@ -27,6 +27,7 @@ DEFAULT_CONFIG = {
     "batch_size": 8,
     "checkpoint": "roberta-large",
     "epochs": 10,
+    "eval_steps": 50,
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
     "save_path": "output",
@@ -104,6 +105,12 @@ def parse_args():
         "--epochs", type=int, default=10, help="the number of epochs to run for"
     )
     parser.add_argument(
+        "--eval_steps",
+        type=int,
+        default=50,
+        help="how often to evaluate and save the model",
+    )
+    parser.add_argument(
         "--hidden_dropout",
         type=float,
         default=0.2,
@@ -149,6 +156,7 @@ def build_config(params):
         "batch_size": params.batch_size,
         "checkpoint": params.checkpoint,
         "epochs": params.epochs,
+        "eval_steps": params.eval_steps,
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
         "save_path": params.save_path,
@@ -183,6 +191,8 @@ def train(
         total_steps=len(train_loader) * config["epochs"],
     )
 
+    best_rmse = 1.0
+
     for epoch in range(1, config["epochs"] + 1):
 
         total_rmse = 0
@@ -195,13 +205,30 @@ def train(
             optimizer.step()
             scheduler.step()
             total_rmse += compute_rmse(batch["labels"], output.logits.detach())
+            current_steps = (epoch - 1) * len(train_loader) + step
 
-        current_steps = (epoch - 1) * len(train_loader) + step
+            saved = False
+            if current_steps != 0 and current_steps % config["eval_steps"] == 0:
+                valid_rmse = evaluate(model, valid_set, config["batch_size"])
+
+                if valid_rmse < best_rmse:
+                    save(
+                        model, train_set.tokenizer, fold, output_dir=config["save_path"]
+                    )
+                    best_rmse = valid_rmse
+                    saved = True
+
+                print(
+                    f"Fold: {fold} | "
+                    f"Step: {current_steps} | "
+                    f"Epoch: {epoch} | "
+                    f"Train RMSE: {train_rmse} | "
+                    f"Valid RMSE: {valid_rmse} | "
+                    f"{'Model saved' if saved else ''}"
+                )
+
         train_rmse = total_rmse / len(train_loader)
         valid_rmse = evaluate(model, valid_set, config["batch_size"])
-        print(
-            f"Fold: {fold} | Step: {current_steps} Epoch: {epoch} | Train RMSE: {train_rmse} | Valid RMSE: {valid_rmse}"
-        )
 
     return model
 
@@ -283,7 +310,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
         trained_model = train(fold, train_set, valid_set, config)
         rmse = evaluate(trained_model, valid_set, config["batch_size"])
-        save(trained_model, tokenizer, fold, output_dir=config["save_path"])
+        # save(trained_model, tokenizer, fold, output_dir=config["save_path"])
         scores.append(rmse)
         torch.cuda.empty_cache()
         del trained_model
