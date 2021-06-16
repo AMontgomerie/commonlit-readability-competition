@@ -16,7 +16,6 @@ from transformers import (
 )
 from typing import Mapping
 from sklearn.metrics import mean_squared_error
-from sklearn.model_selection import KFold
 
 RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
@@ -30,6 +29,7 @@ DEFAULT_CONFIG = {
     "eval_steps": 50,
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
+    "max_length": 330,
     "save_path": "output",
     "scheduler": "linear",
     "target_sampling": False,
@@ -43,11 +43,13 @@ class CommonLitDataset(Dataset):
         self,
         data: pd.DataFrame,
         tokenizer: AutoTokenizer,
-        sample_targets=False,
+        max_len: int,
+        sample_targets: bool = False,
     ) -> None:
         self.texts = data.excerpt.to_list()
         self.targets = data.target.to_list()
         self.tokenizer = tokenizer
+        self.max_len = max_len
         self.standard_errors = data.standard_error.to_list()
         self.sample_targets = sample_targets
 
@@ -58,7 +60,7 @@ class CommonLitDataset(Dataset):
         text = self.texts[index]
         encoded_inputs = self.tokenizer(
             text,
-            max_length=330,
+            max_length=self.max_len,
             padding="max_length",
             return_tensors="pt",
             return_token_type_ids=False,
@@ -120,6 +122,12 @@ def parse_args():
         "--learning_rate", type=float, default=1e-5, help="the max learning rate"
     )
     parser.add_argument(
+        "--max_length",
+        type=int,
+        default=330,
+        help="the maximum sequence length in tokens",
+    )
+    parser.add_argument(
         "--save_path",
         type=str,
         default="output",
@@ -159,6 +167,7 @@ def build_config(params):
         "eval_steps": params.eval_steps,
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
+        "max_length": params.max_length,
         "save_path": params.save_path,
         "scheduler": params.scheduler,
         "target_sampling": params.target_sampling,
@@ -314,9 +323,14 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         train_set = CommonLitDataset(
             data[data.kfold != fold],
             tokenizer,
+            max_length=config["max_length"],
             sample_targets=config["target_sampling"],
         )
-        valid_set = CommonLitDataset(data[data.kfold == fold], tokenizer)
+        valid_set = CommonLitDataset(
+            data[data.kfold == fold],
+            tokenizer,
+            max_length=config["max_length"],
+        )
         trained_model, rmse = train(fold, train_set, valid_set, config)
         scores.append(rmse)
         torch.cuda.empty_cache()
