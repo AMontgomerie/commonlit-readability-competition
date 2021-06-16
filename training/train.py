@@ -323,13 +323,13 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         train_set = CommonLitDataset(
             data[data.kfold != fold],
             tokenizer,
-            max_length=config["max_length"],
+            config["max_length"],
             sample_targets=config["target_sampling"],
         )
         valid_set = CommonLitDataset(
             data[data.kfold == fold],
             tokenizer,
-            max_length=config["max_length"],
+            config["max_length"],
         )
         trained_model, rmse = train(fold, train_set, valid_set, config)
         scores.append(rmse)
