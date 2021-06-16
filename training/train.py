@@ -64,6 +64,7 @@ class CommonLitDataset(Dataset):
             padding="max_length",
             return_tensors="pt",
             return_token_type_ids=False,
+            truncation=True,
         )
 
         encoded_inputs["input_ids"] = torch.squeeze(encoded_inputs["input_ids"]).to(
