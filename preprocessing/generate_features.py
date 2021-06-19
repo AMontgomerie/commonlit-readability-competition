@@ -6,6 +6,8 @@ import pandas as pd
 import re
 import string
 from textstat import textstat
+from textatistic import Textatistic
+from typing import List, Mapping, Any
 
 STOPWORDS = stopwords.words("english")
 PUNCTUATION = list(string.punctuation)
@@ -31,21 +33,35 @@ POS_TAGS = [
     "SPACE",
 ]
 RANDOM_SEED = 0
+PROGRESS_BAR_LEN = 50
 
 spacy_pipeline = en_core_web_sm.load()
 
 
-def generate_features(data):
+def generate_features(data: List) -> pd.DataFrame:
+    print(f"Generating features for {len(data)} texts.")
     feature_data = []
 
-    for text in data:
+    printProgressBar(
+        0, len(data), prefix="Progress:", suffix="Complete", length=PROGRESS_BAR_LEN
+    )
+
+    for i, text in enumerate(data):
         features = preprocess_text(text)
         feature_data.append(features)
+
+        printProgressBar(
+            i + 1,
+            len(data),
+            prefix="Progress:",
+            suffix="Complete",
+            length=PROGRESS_BAR_LEN,
+        )
 
     return pd.DataFrame(feature_data)
 
 
-def preprocess_text(text):
+def preprocess_text(text: str) -> Mapping[str, float]:
     simplified_text = simplify_punctuation(text)
 
     features = {
@@ -80,14 +96,15 @@ def preprocess_text(text):
         "nonstop_token_proportion": get_nonstop_proportion(text),
     }
 
+    features.update(get_textatistic_metrics(text))
     features.update(get_total_pos_tags(text))
     features.update(get_mean_pos_tags(text))
 
     return features
 
 
-def simplify_punctuation(text):
-    # from https://github.com/shivam5992/textstat/issues/77
+def simplify_punctuation(text: str) -> str:
+    """Taken from from https://github.com/shivam5992/textstat/issues/77"""
 
     text = re.sub(r"[,:;()\-]", " ", text)  # Override commas, colons, etc to spaces/
     text = re.sub(r"[\.!?]", ".", text)  # Change all terminators like ! and ? to "."
@@ -100,22 +117,22 @@ def simplify_punctuation(text):
     return text
 
 
-def get_text_standard_cat(text):
+def get_text_standard_cat(text: str) -> int:
     text_standard_string = textstat.text_standard(text, float_output=False)
     return extract_numerical_grade(text_standard_string)
 
 
-def extract_numerical_grade(grade_string):
+def extract_numerical_grade(grade_string: str) -> int:
     return int(re.search(r"-?\d+", grade_string).group(0))
 
 
-def get_max_parse_tree_depth(text):
+def get_max_parse_tree_depth(text: str) -> int:
     doc = spacy_pipeline(text)
     depths = get_parse_tree_depths(doc)
     return max(depths)
 
 
-def get_mean_parse_tree_depth(text):
+def get_mean_parse_tree_depth(text: str) -> int:
     sentences = text.split(".")
     depths = []
     for doc in list(spacy_pipeline.pipe(sentences)):
@@ -123,16 +140,16 @@ def get_mean_parse_tree_depth(text):
     return np.mean(depths)
 
 
-def get_parse_tree_depths(doc):
+def get_parse_tree_depths(doc: Any) -> List[int]:
     return [get_depth(token) for token in doc]
 
 
-def get_depth(token, depth=0):
+def get_depth(token: Any, depth: int = 0) -> int:
     depths = [get_depth(child, depth + 1) for child in token.children]
     return max(depths) if len(depths) > 0 else depth
 
 
-def get_mean_pos_tags(text):
+def get_mean_pos_tags(text: str) -> Mapping[str, int]:
     sentences = text.split(".")
     sentence_counts = make_pos_tag_count_lists(sentences)
     num_sentences = textstat.sentence_count(text)
@@ -140,13 +157,13 @@ def get_mean_pos_tags(text):
     return mean_pos_tags
 
 
-def get_total_pos_tags(text):
+def get_total_pos_tags(text: str) -> Mapping[str, int]:
     doc = spacy_pipeline(text)
     tag_counts = get_pos_tag_counts(doc)
     return tag_counts
 
 
-def make_pos_tag_count_lists(sentences):
+def make_pos_tag_count_lists(sentences) -> Mapping[str, int]:
     sentence_counts = {}
     for doc in list(spacy_pipeline.pipe(sentences)):
         pos_counts = get_pos_tag_counts(doc)
@@ -158,7 +175,7 @@ def make_pos_tag_count_lists(sentences):
     return sentence_counts
 
 
-def get_pos_tag_counts(doc):
+def get_pos_tag_counts(doc: Any) -> Mapping[str, int]:
     pos_counts = {tag.lower(): 0 for tag in POS_TAGS}
     pos_tags = [token.pos_.lower() for token in doc]
     for tag in pos_tags:
@@ -236,6 +253,49 @@ def get_num_sentences(text):
         return 1
     else:
         return total
+
+
+def get_textatistic_metrics(text):
+    metrics = Textatistic(text)
+    return {
+        "not_dale_chall_count": metrics.notdalechall_count,
+        "syllable_count": metrics.sybl_count,
+        "polysyllable_count": metrics.polysyblword_count,
+        "nonspace_char_count": metrics.char_count,
+    }
+
+
+def printProgressBar(
+    iteration,
+    total,
+    prefix="",
+    suffix="",
+    decimals=1,
+    length=100,
+    fill="█",
+    printEnd="\r",
+):
+    """
+    Taken from https://stackoverflow.com/a/34325723/3380168
+
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + "-" * (length - filledLength)
+    print(f"\r{prefix} |{bar}| {percent}% {suffix}", end=printEnd)
+    # Print New Line on Complete
+    if iteration == total:
+        print()
 
 
 if __name__ == "__main__":
