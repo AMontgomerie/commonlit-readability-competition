@@ -78,10 +78,8 @@ def preprocess_text(text: str) -> Mapping[str, float]:
         "difficult_words": textstat.difficult_words(simplified_text),
         "linsear_write_formula": textstat.linsear_write_formula(simplified_text),
         "gunning_fog": textstat.gunning_fog(simplified_text),
-        "text_standard_cont": textstat.text_standard(
-            simplified_text, float_output=True
-        ),
-        "text_standard_cat": get_text_standard_cat(simplified_text),
+        "text_standard": textstat.text_standard(simplified_text, float_output=True),
+        # "text_standard_cat": get_text_standard_cat(simplified_text),
         "mean_parse_tree_depth": get_mean_parse_tree_depth(text),
         "max_parse_tree_depth": get_max_parse_tree_depth(text),
         "mean_ents_per_sentence": get_mean_ents_per_sentence(text),
