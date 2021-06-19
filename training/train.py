@@ -19,7 +19,6 @@ from sklearn.metrics import mean_squared_error
 
 RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
-torch.manual_seed(RANDOM_SEED)
 
 DEFAULT_CONFIG = {
     "attention_dropout": 0.2,
@@ -306,6 +305,8 @@ def save(
 
 
 def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
+    seed_everything(RANDOM_SEED)
+
     tokenizer = AutoTokenizer.from_pretrained(config["checkpoint"])
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
@@ -351,7 +352,6 @@ def seed_everything(seed=0):
 
 
 if __name__ == "__main__":
-    seed_everything(RANDOM_SEED)
     params = parse_args()
     config = build_config(params)
     cv_score = train_cv(config)
