@@ -26,6 +26,7 @@ DEFAULT_CONFIG = {
     "checkpoint": "roberta-large",
     "epochs": 10,
     "eval_steps": 50,
+    "eval_style": "epochs",
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
     "max_length": 330,
@@ -113,6 +114,12 @@ def parse_args():
         help="how often to evaluate and save the model",
     )
     parser.add_argument(
+        "--eval_style",
+        type=str,
+        default="epochs",
+        help="whether to evaluate every epoch or per x number of steps",
+    )
+    parser.add_argument(
         "--hidden_dropout",
         type=float,
         default=0.2,
@@ -165,6 +172,7 @@ def build_config(params):
         "checkpoint": params.checkpoint,
         "epochs": params.epochs,
         "eval_steps": params.eval_steps,
+        "eval_style": params.eval_style,
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
         "max_length": params.max_length,
@@ -216,7 +224,11 @@ def train(
             current_steps = (epoch - 1) * len(train_loader) + step
 
             saved = False
-            if current_steps != 0 and current_steps % config["eval_steps"] == 0:
+            if (
+                config["eval_style"] == "steps"
+                and current_steps != 0
+                and current_steps % config["eval_steps"] == 0
+            ):
                 train_rmse = total_rmse / config["eval_steps"]
                 valid_rmse = evaluate(model, valid_set, config["batch_size"])
                 total_rmse = 0
@@ -227,6 +239,25 @@ def train(
                     )
                     best_rmse = valid_rmse
                     saved = True
+
+                print(
+                    f"Fold: {fold} | "
+                    f"Step: {current_steps} | "
+                    f"Epoch: {epoch} | "
+                    f"Train RMSE: {train_rmse} | "
+                    f"Valid RMSE: {valid_rmse} | "
+                    f"{'Model saved' if saved else ''}"
+                )
+
+        if config["eval_style"] == "epoch":
+            train_rmse = total_rmse / len(train_loader)
+            valid_rmse = evaluate(model, valid_set, config["batch_size"])
+            total_rmse = 0
+
+            if valid_rmse < best_rmse:
+                save(model, train_set.tokenizer, fold, output_dir=config["save_path"])
+                best_rmse = valid_rmse
+                saved = True
 
                 print(
                     f"Fold: {fold} | "
