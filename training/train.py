@@ -249,7 +249,7 @@ def train(
                     f"{'Model saved' if saved else ''}"
                 )
 
-        if config["eval_style"] == "epoch":
+        if config["eval_style"] == "epochs":
             train_rmse = total_rmse / len(train_loader)
             valid_rmse = evaluate(model, valid_set, config["batch_size"])
             total_rmse = 0
