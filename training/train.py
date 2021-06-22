@@ -259,14 +259,14 @@ def train(
                 best_rmse = valid_rmse
                 saved = True
 
-                print(
-                    f"Fold: {fold} | "
-                    f"Step: {current_steps} | "
-                    f"Epoch: {epoch} | "
-                    f"Train RMSE: {train_rmse} | "
-                    f"Valid RMSE: {valid_rmse} | "
-                    f"{'Model saved' if saved else ''}"
-                )
+            print(
+                f"Fold: {fold} | "
+                f"Step: {current_steps} | "
+                f"Epoch: {epoch} | "
+                f"Train RMSE: {train_rmse} | "
+                f"Valid RMSE: {valid_rmse} | "
+                f"{'Model saved' if saved else ''}"
+            )
 
     valid_rmse = evaluate(model, valid_set, config["batch_size"])
     saved = False
