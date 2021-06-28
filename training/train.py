@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
     "attention_dropout": 0.2,
     "batch_size": 8,
     "checkpoint": "roberta-large",
+    "early_stopping": True,
     "epochs": 10,
     "eval_steps": 50,
     "eval_style": "epochs",
@@ -105,6 +106,9 @@ def parse_args():
         help="which pretrained model and tokenizer to use",
     )
     parser.add_argument(
+        "--early_stopping", dest="early_stopping", action="store_true"
+    )
+    parser.add_argument(
         "--epochs", type=int, default=10, help="the number of epochs to run for"
     )
     parser.add_argument(
@@ -170,6 +174,7 @@ def build_config(params):
         "attention_dropout": params.attention_dropout,
         "batch_size": params.batch_size,
         "checkpoint": params.checkpoint,
+        "early_stopping": params.early_stopping,
         "epochs": params.epochs,
         "eval_steps": params.eval_steps,
         "eval_style": params.eval_style,
@@ -233,7 +238,7 @@ def train(
                 valid_rmse = evaluate(model, valid_set, config["batch_size"])
                 total_rmse = 0
 
-                if valid_rmse < best_rmse:
+                if config["early_stopping"] and valid_rmse < best_rmse:
                     save(
                         model, train_set.tokenizer, fold, output_dir=config["save_path"]
                     )
@@ -254,7 +259,7 @@ def train(
             valid_rmse = evaluate(model, valid_set, config["batch_size"])
             total_rmse = 0
 
-            if valid_rmse < best_rmse:
+            if config["early_stopping"] and valid_rmse < best_rmse:
                 save(model, train_set.tokenizer, fold, output_dir=config["save_path"])
                 best_rmse = valid_rmse
                 saved = True
@@ -268,12 +273,13 @@ def train(
                 f"{'Model saved' if saved else ''}"
             )
 
-    valid_rmse = evaluate(model, valid_set, config["batch_size"])
-    saved = False
-    if valid_rmse < best_rmse:
-        save(model, train_set.tokenizer, fold, output_dir=config["save_path"])
-        best_rmse = valid_rmse
-        saved = True
+    if config["eval_style"] == "steps" or not config["early_stopping"]:
+        valid_rmse = evaluate(model, valid_set, config["batch_size"])
+        saved = False
+        if valid_rmse < best_rmse:
+            save(model, train_set.tokenizer, fold, output_dir=config["save_path"])
+            best_rmse = valid_rmse
+            saved = True
 
     print(
         f"Fold {fold} | Training Complete | Valid RMSE: {valid_rmse} | {'Model saved' if saved else ''}"
