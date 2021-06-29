@@ -189,15 +189,27 @@ def build_config(params):
     }
 
 
+def get_model(checkpoint, hidden_dropout, attention_dropout):
+    if checkpoint.startswith("xlnet"):
+        return AutoModelForSequenceClassification.from_pretrained(
+            checkpoint,
+            num_labels=1,
+            dropout=hidden_dropout
+        ).to(DEVICE)
+
+    else:
+        return AutoModelForSequenceClassification.from_pretrained(
+            checkpoint,
+            num_labels=1,
+            hidden_dropout_prob=hidden_dropout,
+            attention_probs_dropout_prob=attention_dropout,
+        ).to(DEVICE)
+
+
 def train(
     fold: int, train_set: Dataset, valid_set: Dataset, config: Mapping
 ) -> AutoModelForSequenceClassification:
-    model = AutoModelForSequenceClassification.from_pretrained(
-        config["checkpoint"],
-        num_labels=1,
-        hidden_dropout_prob=config["hidden_dropout"],
-        attention_probs_dropout_prob=config["attention_dropout"],
-    ).to(DEVICE)
+    model = get_model(config["checkpoint"], config["hidden_dropout"], config["attention_dropout"])
     model.train()
     train_loader = DataLoader(train_set, shuffle=True, batch_size=config["batch_size"])
     criterion = nn.MSELoss()
