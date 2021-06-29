@@ -17,7 +17,6 @@ from transformers import (
 from typing import Mapping
 from sklearn.metrics import mean_squared_error
 
-RANDOM_SEED = 0
 DEVICE = torch.device("cuda")
 
 DEFAULT_CONFIG = {
@@ -31,6 +30,7 @@ DEFAULT_CONFIG = {
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
     "max_length": 330,
+    "random_seed": 0,
     "save_path": "output",
     "scheduler": "linear",
     "target_sampling": False,
@@ -137,6 +137,12 @@ def parse_args():
         type=int,
         default=330,
         help="the maximum sequence length in tokens",
+    ),
+    parser.add_argument(
+        "--random_seed",
+        type=int,
+        default=0,
+        help="the random seed",
     )
     parser.add_argument(
         "--save_path",
@@ -355,7 +361,7 @@ def save(
 
 
 def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
-    seed_everything(RANDOM_SEED)
+    seed_everything(config["random_seed"])
 
     tokenizer = AutoTokenizer.from_pretrained(config["checkpoint"])
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
