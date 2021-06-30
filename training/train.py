@@ -374,10 +374,10 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
 
     scores = []
 
-    print(f"Training {config['checkpoint']} for {len(folds)} folds with:")
+    print(f"Training {config['checkpoint']} for {len(folds)} folds in reverse order with:")
     print(config)
 
-    for fold in folds:
+    for fold in reversed(folds):
         train_set = CommonLitDataset(
             data[data.kfold != fold],
             tokenizer,
@@ -403,8 +403,8 @@ def seed_everything(seed=0):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    #torch.backends.cudnn.deterministic = True
-    #torch.backends.cudnn.benchmark = True
+    # torch.backends.cudnn.deterministic = True
+    # torch.backends.cudnn.benchmark = True
 
 
 if __name__ == "__main__":
