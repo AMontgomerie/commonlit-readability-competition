@@ -204,6 +204,14 @@ def get_model(checkpoint, hidden_dropout, attention_dropout):
             dropout=hidden_dropout
         ).to(DEVICE)
 
+    elif checkpoint.startswith("funnel-transformer"):
+        return AutoModelForSequenceClassification.from_pretrained(
+            checkpoint,
+            num_labels=1,
+            hidden_dropout=hidden_dropout,
+            attention_dropout=attention_dropout,
+        ).to(DEVICE)
+
     else:
         return AutoModelForSequenceClassification.from_pretrained(
             checkpoint,
