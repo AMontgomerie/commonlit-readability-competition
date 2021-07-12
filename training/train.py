@@ -196,8 +196,8 @@ def build_config(params):
 
 
 def get_model(checkpoint, hidden_dropout, attention_dropout):
-    if checkpoint.startswith("xlnet"):
-        print("xlnet doesn't have distinct hidden and attention dropout. Assigning dropout=hidden_dropout.")
+    if checkpoint.startswith("xlnet") or checkpoint.startswth("transfo-xl"):
+        print("Assigning dropout=hidden_dropout.")
         return AutoModelForSequenceClassification.from_pretrained(
             checkpoint,
             num_labels=1,
