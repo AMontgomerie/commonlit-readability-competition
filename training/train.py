@@ -9,6 +9,7 @@ from torch.utils.data import Dataset, DataLoader
 from transformers import (
     AdamW,
     AutoTokenizer,
+    AutoModel,
     AutoModelForSequenceClassification,
     get_constant_schedule_with_warmup,
     get_cosine_schedule_with_warmup,
@@ -16,6 +17,8 @@ from transformers import (
 )
 from typing import Mapping
 from sklearn.metrics import mean_squared_error
+
+from model_with_extra_attention import CLRPModel
 
 DEVICE = torch.device("cuda")
 
@@ -27,6 +30,7 @@ DEFAULT_CONFIG = {
     "epochs": 10,
     "eval_steps": 50,
     "eval_style": "epochs",
+    "extra_attention_head": True,
     "hidden_dropout": 0.2,
     "learning_rate": 1e-5,
     "max_length": 330,
@@ -124,6 +128,11 @@ def parse_args():
         help="whether to evaluate every epoch or per x number of steps",
     )
     parser.add_argument(
+        "--extra_attention_head",
+        dest="extra_attention_head",
+        action="store_true"
+    ),
+    parser.add_argument(
         "--hidden_dropout",
         type=float,
         default=0.2,
@@ -184,9 +193,11 @@ def build_config(params):
         "epochs": params.epochs,
         "eval_steps": params.eval_steps,
         "eval_style": params.eval_style,
+        "extra_attention_head": params.extra_attention_head,
         "hidden_dropout": params.hidden_dropout,
         "learning_rate": params.learning_rate,
         "max_length": params.max_length,
+        "random_seed": params.random_seed,
         "save_path": params.save_path,
         "scheduler": params.scheduler,
         "target_sampling": params.target_sampling,
@@ -195,36 +206,53 @@ def build_config(params):
     }
 
 
-def get_model(checkpoint, hidden_dropout, attention_dropout):
+def get_model(checkpoint, hidden_dropout, attention_dropout, extra_attention_head):
+
+    # the naming of the dropout params depends on the model architecture
     if checkpoint.startswith("xlnet") or checkpoint.startswith("transfo-xl"):
         print("Assigning dropout=hidden_dropout.")
-        return AutoModelForSequenceClassification.from_pretrained(
-            checkpoint,
-            num_labels=1,
-            dropout=hidden_dropout
-        ).to(DEVICE)
-
+        transformer_config = {
+            "num_labels": 1,
+            "dropout": hidden_dropout
+        }
     elif checkpoint.startswith("funnel-transformer"):
-        return AutoModelForSequenceClassification.from_pretrained(
-            checkpoint,
-            num_labels=1,
-            hidden_dropout=hidden_dropout,
-            attention_dropout=attention_dropout,
-        ).to(DEVICE)
-
+        transformer_config = {
+            "num_labels": 1,
+            "hidden_dropout": hidden_dropout,
+            "attention_dropout": attention_dropout
+        }
     else:
-        return AutoModelForSequenceClassification.from_pretrained(
+        transformer_config = {
+            "num_labels": 1,
+            "hidden_dropout_prob": hidden_dropout,
+            "attention_probs_dropout_prob": attention_dropout,
+        }
+
+    # optionally wrap model and add an attention head
+    if extra_attention_head:
+        transformer = AutoModel.from_pretrained(
             checkpoint,
-            num_labels=1,
-            hidden_dropout_prob=hidden_dropout,
-            attention_probs_dropout_prob=attention_dropout,
-        ).to(DEVICE)
+            **transformer_config
+        )
+        model = CLRPModel(transformer)
+    else:
+        model = AutoModelForSequenceClassification.from_pretrained(
+            checkpoint,
+            **transformer_config
+        )
+
+    return model.to(DEVICE)
 
 
 def train(
     fold: int, train_set: Dataset, valid_set: Dataset, config: Mapping
 ) -> AutoModelForSequenceClassification:
-    model = get_model(config["checkpoint"], config["hidden_dropout"], config["attention_dropout"])
+    model = get_model(
+        config["checkpoint"],
+        config["hidden_dropout"],
+        config["attention_dropout"],
+        config["extra_attention_head"]
+    )
     model.train()
     train_loader = DataLoader(train_set, shuffle=True, batch_size=config["batch_size"])
     criterion = nn.MSELoss()
