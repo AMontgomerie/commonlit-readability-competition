@@ -416,7 +416,7 @@ def save(
 
     if extra_attention_head:
         # extra attn head models are not hf models so should be save like normal pt models
-        torch.save(model.state_dict(), path)
+        torch.save(model.state_dict(), os.path.join(path, "model.pt"))
     else:
         model.save_pretrained(path)
 
