@@ -33,4 +33,4 @@ class CLRPModel(nn.Module):
         transformer_out = self.transformer(input_ids, attention_mask)
         x = self.head(transformer_out.last_hidden_state)
         x = self.linear(x)
-        return x
+        return {"logits": x}
