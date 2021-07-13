@@ -298,7 +298,11 @@ def train(
 
                 if config["early_stopping"] and valid_rmse < best_rmse:
                     save(
-                        model, train_set.tokenizer, fold, output_dir=config["save_path"]
+                        model,
+                        train_set.tokenizer,
+                        fold,
+                        output_dir=config["save_path"],
+                        extra_attention_head=config["extra_attention_head"]
                     )
                     best_rmse = valid_rmse
                     saved = True
@@ -318,7 +322,13 @@ def train(
             total_rmse = 0
 
             if config["early_stopping"] and valid_rmse < best_rmse:
-                save(model, train_set.tokenizer, fold, output_dir=config["save_path"])
+                save(
+                    model,
+                    train_set.tokenizer,
+                    fold,
+                    output_dir=config["save_path"],
+                    extra_attention_head=config["extra_attention_head"]
+                )
                 best_rmse = valid_rmse
                 saved = True
 
@@ -335,7 +345,13 @@ def train(
         valid_rmse = evaluate(model, valid_set, config["batch_size"])
         saved = False
         if valid_rmse < best_rmse:
-            save(model, train_set.tokenizer, fold, output_dir=config["save_path"])
+            save(
+                model,
+                train_set.tokenizer,
+                fold,
+                output_dir=config["save_path"],
+                extra_attention_head=config["extra_attention_head"]
+            )
             best_rmse = valid_rmse
             saved = True
 
@@ -393,10 +409,16 @@ def save(
     tokenizer: AutoTokenizer,
     fold: int,
     output_dir: str = "output",
+    extra_attention_head=False
 ):
     path = os.path.join(output_dir, f"model_{fold}")
-    model.save_pretrained(path)
     tokenizer.save_pretrained(path)
+
+    if extra_attention_head:
+        # extra attn head models are not hf models so should be save like normal pt models
+        torch.save(model.state_dict(), path)
+    else:
+        model.save_pretrained(path)
 
 
 def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
