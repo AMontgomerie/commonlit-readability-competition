@@ -234,7 +234,10 @@ def get_model(checkpoint, hidden_dropout, attention_dropout, extra_attention_hea
             checkpoint,
             **transformer_config
         )
-        model = CLRPModel(transformer)
+        model = CLRPModel(
+            transformer,
+            hidden_size=transformer.config.hidden_size
+        )
     else:
         model = AutoModelForSequenceClassification.from_pretrained(
             checkpoint,

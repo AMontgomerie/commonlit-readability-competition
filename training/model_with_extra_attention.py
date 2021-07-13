@@ -32,6 +32,5 @@ class CLRPModel(nn.Module):
     def forward(self, input_ids, attention_mask):
         transformer_out = self.transformer(input_ids, attention_mask)
         x = self.head(transformer_out.last_hidden_state)
-        print(x.shape)
         x = self.linear(x)
         return x
