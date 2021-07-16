@@ -17,7 +17,7 @@ from transformers import (
 from typing import Mapping
 from sklearn.metrics import mean_squared_error
 
-import args
+from training import args
 #from .model_with_extra_attention import CLRPModel
 
 DEVICE = torch.device("cuda")
