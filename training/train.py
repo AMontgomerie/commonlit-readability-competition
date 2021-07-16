@@ -301,7 +301,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
 
-    if "folds" in config:
+    if config.folds:
         folds = config.folds
     else:
         folds = data.kfold.unique()
