@@ -353,13 +353,16 @@ def evaluate(
 ) -> float:
     model.eval()
     data_loader = DataLoader(data, shuffle=False, batch_size=batch_size)
-    total_rmse = 0
+
+    preds = []
+    labels = []
 
     for batch in data_loader:
         output = model(batch["input_ids"], batch["attention_mask"])
-        total_rmse += compute_rmse(batch["labels"], output.logits.detach())
+        preds += list(output.logits.detach())
+        labels += list(batch["labels"])
 
-    return total_rmse / len(data_loader)
+    return compute_rmse(labels, preds)
 
 
 def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
