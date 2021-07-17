@@ -248,7 +248,7 @@ def train(
             scheduler.step()
             total_rmse += compute_rmse(
                 batch["labels"].cpu().numpy(),
-                output.logits..cpu().detach().numpy()
+                output.logits.cpu().detach().numpy()
             )
             current_steps = (epoch - 1) * len(train_loader) + step
 
