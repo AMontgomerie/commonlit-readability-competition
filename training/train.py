@@ -246,7 +246,10 @@ def train(
             loss.backward()
             optimizer.step()
             scheduler.step()
-            total_rmse += compute_rmse(batch["labels"].cpu(), output.logits.detach().cpu())
+            total_rmse += compute_rmse(
+                batch["labels"].cpu().numpy(),
+                output.logits..cpu().detach().numpy()
+            )
             current_steps = (epoch - 1) * len(train_loader) + step
 
             saved = False
@@ -359,13 +362,13 @@ def evaluate(
 
     for batch in data_loader:
         output = model(batch["input_ids"], batch["attention_mask"])
-        preds += list(output.logits.detach().cpu())
-        labels += list(batch["labels"].cpu())
+        preds += list(output.logits.cpu().numpy())
+        labels += list(batch["labels"].cpu().numpy())
 
     return compute_rmse(labels, preds)
 
 
-def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
+def compute_rmse(targets: np.array, preds: np.array) -> float:
     rmse = mean_squared_error(targets, preds, squared=False)
     return rmse.item()
 
