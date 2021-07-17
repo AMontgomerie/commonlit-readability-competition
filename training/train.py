@@ -17,29 +17,30 @@ from transformers import (
 )
 from typing import Mapping
 from sklearn.metrics import mean_squared_error
+from types import SimpleNamespace
 
 #from .model_with_extra_attention import CLRPModel
 
 DEVICE = torch.device("cuda")
 
-DEFAULT_CONFIG = {
-    "attention_dropout": 0.0,
-    "batch_size": 8,
-    "checkpoint": "roberta-large",
-    "early_stopping": True,
-    "epochs": 10,
-    "eval_steps": 50,
-    "eval_style": "epochs",
-    "extra_attention_head": False,
-    "hidden_dropout": 0.0,
-    "learning_rate": 1e-5,
-    "max_length": 330,
-    "save_path": "output",
-    "scheduler": "linear",
-    "target_sampling": False,
-    "warmup_steps": 150,
-    "weight_decay": 0.1,
-}
+DEFAULT_CONFIG = SimpleNamespace(
+    attention_dropout=0.1,
+    batch_size=8,
+    checkpoint="roberta-large",
+    early_stopping=True,
+    epochs=10,
+    eval_steps=50,
+    eval_style="epochs",
+    extra_attention_head=False,
+    hidden_dropout=0.1,
+    learning_rate=1e-5,
+    max_length=330,
+    save_path="output",
+    scheduler="linear",
+    target_sampling=False,
+    warmup_steps=150,
+    weight_decay=0.1,
+)
 
 
 def parse_args():
@@ -391,12 +392,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     tokenizer = AutoTokenizer.from_pretrained(config.checkpoint)
     path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
     data = pd.read_csv(path)
-
-    if config.folds:
-        folds = config.folds
-    else:
-        folds = data.kfold.unique()
-
+    folds = data.kfold.unique()
     scores = []
 
     print(f"Training {config.checkpoint} for {len(folds)} folds in reverse order with:")
