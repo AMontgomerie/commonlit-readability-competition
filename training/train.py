@@ -359,14 +359,14 @@ def evaluate(
 
     for batch in data_loader:
         output = model(batch["input_ids"], batch["attention_mask"])
-        preds += list(output.logits.detach())
-        labels += list(batch["labels"])
+        preds += list(output.logits.detach().cpu())
+        labels += list(batch["labels"].cpu())
 
     return compute_rmse(labels, preds)
 
 
 def compute_rmse(targets: torch.tensor, preds: torch.tensor) -> float:
-    rmse = mean_squared_error(targets.cpu(), preds.cpu(), squared=False)
+    rmse = mean_squared_error(targets, preds, squared=False)
     return rmse.item()
 
 
