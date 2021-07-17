@@ -246,7 +246,7 @@ def train(
             loss.backward()
             optimizer.step()
             scheduler.step()
-            total_rmse += compute_rmse(batch["labels"], output.logits.detach())
+            total_rmse += compute_rmse(batch["labels"].cpu(), output.logits.detach().cpu())
             current_steps = (epoch - 1) * len(train_loader) + step
 
             saved = False
