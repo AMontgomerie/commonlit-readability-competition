@@ -1,10 +1,10 @@
 import torch
-import torch.nn as nn
+from torch.nn import Module
 from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 from transformers import AutoTokenizer
-from typing import List, Tuple
+from typing import List, Tuple, Any
 import tqdm
 
 from training import Config
@@ -15,7 +15,7 @@ from data_prep import ReadabilityDataset
 
 @torch.no_grad()
 def oof_out(
-    dataloader: DataLoader, model: nn.Module, device: torch.device
+    dataloader: DataLoader, model: Module, device: torch.device
 ) -> Tuple[List, List, List]:
     model.eval()
     fin_out = []

@@ -10,7 +10,7 @@ from utils import seed_everything, fetch_loss, get_optimizer_params, fetch_sched
 from data_prep import make_loaders
 from models import TransformerWithAttentionHead
 from training import Trainer, Config
-from logging import make_oofs, save_log
+from log import make_oofs, save_log
 
 DEFAULT_EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
 
