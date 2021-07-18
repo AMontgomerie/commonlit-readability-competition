@@ -9,7 +9,8 @@ from sklearn.metrics import mean_squared_error
 from utils import seed_everything, fetch_loss, get_optimizer_params, fetch_scheduler
 from data_prep import make_loaders
 from models import TransformerWithAttentionHead
-from training import Trainer, Config, make_oofs
+from training import Trainer, Config
+from logging import make_oofs, save_log
 
 DEFAULT_EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
 
@@ -105,24 +106,6 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
     df_oof.to_csv(os.path.join(config.save_path, "roberta_oof.csv"), index=False)
 
     save_log(loss_cv, oof_rmse, config)
-
-
-def save_log(loss_cv, rmse, config):
-    with open(f'/logs.txt', 'w') as f:
-        f.write(f'##### VALID SCORES ##############\n')
-        f.write(f'RMSE Mean : {np.mean(loss_cv)} \n')
-        f.write(f'RMSE Fold Wise : {loss_cv}\n')
-        f.write(f'OOF RMSE : {rmse} \n\n')
-        f.write(f"######## MODEL PARAMS ##########\n")
-        f.write(f'NUM EPOCHS : {config.epochs} \n')
-        f.write(f'LR : {config.learning_rate}\n')
-        f.write(f"Batch_size : {config.train_batch_size}\n")
-        f.write(f"Weight Decay : {config.weight_decay}\n")
-        f.write(f"Scheduler : {config.scheduler} \n")
-        f.write(f"Max Length : {config.max_length}\n")
-        f.write(f"Differential_LR :{config.use_diff_lr}\n")
-        f.write(f"Optimizer : AdamW\n")
-        f.write(f"Ltype : {config.loss_type}\n")
 
 
 if __name__ == "__main__":
