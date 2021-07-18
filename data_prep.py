@@ -32,7 +32,7 @@ class ReadabilityDataset(Dataset):
         return input_ids, attention_mask, target, row.id
 
 
-def make_loader(
+def make_loaders(
     data: pd.DataFrame,
     tokenizer: AutoTokenizer,
     fold: int,

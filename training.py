@@ -49,7 +49,6 @@ class Trainer:
         best_score: float,
         device: torch.device,
         epoch: int,
-        fold: int
     ) -> float:
         loss_score = AverageMeter()
         self.model.train()
@@ -80,7 +79,6 @@ class Trainer:
                     f"Valid Score at Step {bi} for Epoch {epoch+1}: {self.valid_score}, Step Size: {self.eval_steps}"
                 )
 
-                # Reducing eval steps
                 for rmse, period in self.eval_schedule:
                     if self.valid_score >= rmse:
                         self.eval_steps = period
