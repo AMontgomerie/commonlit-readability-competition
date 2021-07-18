@@ -10,6 +10,7 @@ from transformers import (
 )
 from typing import Any, List, Mapping
 from torch import Tensor
+from torch.optim import Optimizer
 
 
 class AverageMeter(object):
@@ -69,7 +70,7 @@ def fetch_loss(ltype: str = 'mse') -> Tensor:
 
 def fetch_scheduler(
     scheduler_type: str,
-    optimizer: torch.optim.optimizer.Optimizer,
+    optimizer: Optimizer,
     warm_up: int,
     total_steps: int = None
 ) -> Any:

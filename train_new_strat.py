@@ -12,12 +12,14 @@ from data_prep import make_loaders
 from models import TransformerWithAttentionHead
 from training import Trainer
 
+DEFAULT_EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
+
 
 @dataclass()
 class Config:
+    eval_schedule: List[Tuple[float, int]]
     device: torch.device = torch.device('cuda')
     max_length: int = 248
-    eval_schedule: List[Tuple[float, int]] = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
     print_step: int = 10
     num_workers: int = 4
     train_batch_size: int = 4
@@ -113,5 +115,5 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
 if __name__ == "__main__":
     data = pd.read_csv('data/train_folds.csv')
     folds = list(data.kfold.unique())
-    config = Config()
+    config = Config(eval_schedule=DEFAULT_EVAL_SCHEDULE)
     train_cv(data, folds, config)
