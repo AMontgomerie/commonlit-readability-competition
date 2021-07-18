@@ -1,47 +1,27 @@
-from types import SimpleNamespace
+import os
 import pandas as pd
 import numpy as np
-import torch
 from torch.optim import AdamW
 from transformers import AutoTokenizer
-from typing import List, Tuple
-from dataclasses import dataclass
+from typing import List
+from sklearn.metrics import mean_squared_error
 
 from utils import seed_everything, fetch_loss, get_optimizer_params, fetch_scheduler
 from data_prep import make_loaders
 from models import TransformerWithAttentionHead
-from training import Trainer
+from training import Trainer, Config, make_oofs
 
 DEFAULT_EVAL_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
 
 
-@dataclass()
-class Config:
-    eval_schedule: List[Tuple[float, int]]
-    device: torch.device = torch.device('cuda')
-    max_length: int = 248
-    print_step: int = 10
-    num_workers: int = 4
-    train_batch_size: int = 4
-    valid_batch_size: int = 4
-    epochs: int = 3
-    learning_rate: float = 1e-5
-    weight_decay: float = 0.0
-    loss_type: str = "mse"
-    use_diff_lr: bool = True
-    model_checkpoint: str = "microsoft/deberta-large"
-    scheduler: str = "cos"
-    seed: int = 1000
-
-
 def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
     loss_cv = []
+    tokenizer = AutoTokenizer.from_pretrained(config.model_checkpoint)
 
     for fold in folds:
         print(f'Starting for fold {fold} and seed {config.seed+fold} \n')
         seed_everything(config.seed+fold)
 
-        tokenizer = AutoTokenizer.from_pretrained(config.model_checkpoint)
         train_loader, valid_loader = make_loaders(
             data,
             tokenizer,
@@ -110,6 +90,39 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
         print(f"{fold}: {result}")
 
     print('CV RMSE:', np.mean(loss_cv))
+
+    oof_pred, oof_tar, oof_id, oof_fold = make_oofs(data, tokenizer, config)
+    oof = np.concatenate(oof_pred)
+    true = np.concatenate(oof_tar)
+    id = np.concatenate(oof_id)
+    folds = np.concatenate(oof_fold)
+    oof_rmse = mean_squared_error(true, oof, squared=False)
+    print('Overall OOF RMSE = %.3f' % oof_rmse)
+
+    df_oof = pd.DataFrame({
+        "id": id, "target": true, "pred": oof, "fold": folds
+    })
+    df_oof.to_csv(os.path.join(config.save_path, "roberta_oof.csv"), index=False)
+
+    save_log(loss_cv, oof_rmse, config)
+
+
+def save_log(loss_cv, rmse, config):
+    with open(f'/logs.txt', 'w') as f:
+        f.write(f'##### VALID SCORES ##############\n')
+        f.write(f'RMSE Mean : {np.mean(loss_cv)} \n')
+        f.write(f'RMSE Fold Wise : {loss_cv}\n')
+        f.write(f'OOF RMSE : {rmse} \n\n')
+        f.write(f"######## MODEL PARAMS ##########\n")
+        f.write(f'NUM EPOCHS : {config.epochs} \n')
+        f.write(f'LR : {config.learning_rate}\n')
+        f.write(f"Batch_size : {config.train_batch_size}\n")
+        f.write(f"Weight Decay : {config.weight_decay}\n")
+        f.write(f"Scheduler : {config.scheduler} \n")
+        f.write(f"Max Length : {config.max_length}\n")
+        f.write(f"Differential_LR :{config.use_diff_lr}\n")
+        f.write(f"Optimizer : AdamW\n")
+        f.write(f"Ltype : {config.loss_type}\n")
 
 
 if __name__ == "__main__":

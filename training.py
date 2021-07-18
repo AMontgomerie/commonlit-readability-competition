@@ -1,10 +1,12 @@
 import numpy as np
+import pandas as pd
 import tqdm
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim.optimizer import Optimizer
 from typing import List, Tuple
+from dataclasses import dataclass
 
 from transformers.models.auto.tokenization_auto import AutoTokenizer
 
@@ -14,6 +16,26 @@ from models import TransformerWithAttentionHead
 
 
 DEFAULT_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
+
+
+@dataclass()
+class Config:
+    eval_schedule: List[Tuple[float, int]]
+    device: torch.device = torch.device('cuda')
+    max_length: int = 248
+    print_step: int = 10
+    num_workers: int = 4
+    train_batch_size: int = 4
+    valid_batch_size: int = 4
+    epochs: int = 3
+    learning_rate: float = 1e-5
+    weight_decay: float = 0.0
+    loss_type: str = "mse"
+    use_diff_lr: bool = True
+    model_checkpoint: str = "microsoft/deberta-large"
+    scheduler: str = "cos"
+    seed: int = 1000
+    save_path: str = "output"
 
 
 class Trainer:
@@ -49,6 +71,7 @@ class Trainer:
         best_score: float,
         device: torch.device,
         epoch: int,
+        fold: int,
     ) -> float:
         loss_score = AverageMeter()
         self.model.train()
@@ -88,7 +111,7 @@ class Trainer:
                     best_score = self.valid_score
                     torch.save(
                         self.model.state_dict(),
-                        self.save_path
+                        f"{self.save_path}_{fold}"
                     )
                     print(f'Best model found for epoch {epoch+1} for step {bi}')
 
@@ -150,38 +173,34 @@ def oof_out(
 
 
 def make_oofs(
-    data, model: nn.Module,
+    data: pd.DataFrame,
     tokenizer: AutoTokenizer,
-    device: torch.device,
-    model_path: str,
-    seed: int,
-    valid_bs: int = 32,
-    num_workers: int = 4
+    config: Config
 ) -> Tuple[List, List, List, List]:
     oof_id = []
     oof_fold = []
     oof_pred = []
     oof_tar = []
 
-    model = TransformerWithAttentionHead()
-    model.to(device)
+    model = TransformerWithAttentionHead(config.model_checkpoint)
+    model.to(config.device)
     model.eval()
 
     for fold in range(5):
-        seed_everything(seed+fold)
+        seed_everything(config.seed+fold)
 
         valid = data[data['kfold'] == fold].reset_index(drop=True)
         valid_dataset = ReadabilityDataset(valid, tokenizer)
         valid_loader = DataLoader(
             valid_dataset,
-            batch_size=valid_bs,
+            batch_size=config.valid_batch_size,
             pin_memory=True,
             drop_last=False,
-            num_workers=num_workers
+            num_workers=config.num_workers
         )
-        model.load_state_dict(torch.load(model_path, map_location=device))
+        model.load_state_dict(torch.load("{config.save_path}_{fold}", map_location=config.device))
 
-        valid_out, valid_tar, valid_ids = oof_out(valid_loader, model, device)
+        valid_out, valid_tar, valid_ids = oof_out(valid_loader, model, config.device)
 
         oof_id.append(valid_ids)
         oof_tar.append(valid_tar)
