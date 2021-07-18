@@ -110,12 +110,9 @@ class Evaluator:
 
         for batch in dataloader:
             batch_size = batch[0].shape[0]
-            input_ids = batch[0]
-            attention_mask = batch[1]
-            targets = batch[2]
-            input_ids = input_ids.to(device)
-            attention_mask = attention_mask.to(device)
-            targets = targets.to(device)
+            input_ids = batch[0].to(device)
+            attention_mask = batch[1].to(device)
+            targets = batch[2].to(device)
             output = self.model(input_ids, attention_mask)
             loss = criterion(output, targets.view(-1, 1))
             loss_score.update(loss.detach().item(), batch_size)
