@@ -1,6 +1,4 @@
 import numpy as np
-import pandas as pd
-import tqdm
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -8,11 +6,7 @@ from torch.optim.optimizer import Optimizer
 from typing import List, Tuple
 from dataclasses import dataclass
 
-from transformers.models.auto.tokenization_auto import AutoTokenizer
-
-from utils import AverageMeter, seed_everything
-from data_prep import ReadabilityDataset
-from models import TransformerWithAttentionHead
+from utils import AverageMeter
 
 
 DEFAULT_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
