@@ -111,7 +111,7 @@ class Trainer:
                     best_score = self.valid_score
                     torch.save(
                         self.model.state_dict(),
-                        f"{self.save_path}_{fold}"
+                        f"{self.save_path}_{fold}_{self.seed}.bin"
                     )
                     print(f'Best model found for epoch {epoch+1} for step {bi}')
 
