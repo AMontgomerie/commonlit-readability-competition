@@ -105,7 +105,7 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
     })
     df_oof.to_csv(os.path.join(config.save_path, "roberta_oof.csv"), index=False)
 
-    save_log(loss_cv, oof_rmse, config)
+    save_log(config.save_path, loss_cv, oof_rmse, config)
 
 
 if __name__ == "__main__":

@@ -77,8 +77,8 @@ def make_oofs(
     return oof_pred, oof_tar, oof_id, oof_fold
 
 
-def save_log(loss_cv, rmse, config):
-    with open(f'/logs.txt', 'w') as f:
+def save_log(save_path: str, loss_cv: List[float], rmse: float, config: Config) -> None:
+    with open(f'{save_path}/logs.txt', 'w') as f:
         f.write(f'##### VALID SCORES ##############\n')
         f.write(f'RMSE Mean : {np.mean(loss_cv)} \n')
         f.write(f'RMSE Fold Wise : {loss_cv}\n')
