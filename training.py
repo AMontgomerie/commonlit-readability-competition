@@ -1,11 +1,16 @@
 import numpy as np
+import tqdm
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from torch.optim.optimizer import Optimizer
 from typing import List, Tuple
 
-from utils import AverageMeter
+from transformers.models.auto.tokenization_auto import AutoTokenizer
+
+from utils import AverageMeter, seed_everything
+from data_prep import ReadabilityDataset
+from models import TransformerWithAttentionHead
 
 
 DEFAULT_SCHEDULE = [(0.50, 16), (0.49, 8), (0.48, 4), (0.47, 2), (-1., 1)]
@@ -118,3 +123,71 @@ class Evaluator:
             loss_score.update(loss.detach().item(), batch_size)
 
         return np.sqrt(loss_score.avg)
+
+
+@torch.no_grad()
+def oof_out(
+    dataloader: DataLoader, model: nn.Module, device: torch.device
+) -> Tuple[List, List, List]:
+    model.eval()
+    fin_out = []
+    fin_tar = []
+    fin_id = []
+
+    for batch in tqdm(dataloader, total=len(dataloader)):
+        input_ids = batch[0].to(device)
+        attention_mask = batch[1].to(device)
+        targets = batch[2].to(device)
+        ids = batch[3]
+
+        output = model(input_ids, attention_mask)
+        output = output.squeeze(1).detach().cpu().numpy()
+        targets = targets.detach().cpu().numpy()
+
+        fin_out.append(output)
+        fin_tar.append(targets)
+        fin_id.append(ids)
+
+    return np.concatenate(fin_out), np.concatenate(fin_tar), np.concatenate(fin_id)
+
+
+def make_oofs(
+    data, model: nn.Module,
+    tokenizer: AutoTokenizer,
+    device: torch.device,
+    model_path: str,
+    seed: int,
+    valid_bs: int = 32,
+    num_workers: int = 4
+) -> Tuple[List, List, List, List]:
+    oof_id = []
+    oof_fold = []
+    oof_pred = []
+    oof_tar = []
+
+    model = TransformerWithAttentionHead()
+    model.to(device)
+    model.eval()
+
+    for fold in range(5):
+        seed_everything(seed+fold)
+
+        valid = data[data['kfold'] == fold].reset_index(drop=True)
+        valid_dataset = ReadabilityDataset(valid, tokenizer)
+        valid_loader = DataLoader(
+            valid_dataset,
+            batch_size=valid_bs,
+            pin_memory=True,
+            drop_last=False,
+            num_workers=num_workers
+        )
+        model.load_state_dict(torch.load(model_path, map_location=device))
+
+        valid_out, valid_tar, valid_ids = oof_out(valid_loader, model, device)
+
+        oof_id.append(valid_ids)
+        oof_tar.append(valid_tar)
+        oof_pred.append(valid_out)
+        oof_fold.append([fold]*len(valid_ids))
+
+    return oof_pred, oof_tar, oof_id, oof_fold
