@@ -77,8 +77,9 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
             optimizer,
             scheduler,
             criterion,
-            config.save_path,
             seed=fold+config.seed,
+            save_path=config.save_path,
+            print_step=config.print_step,
             eval_schedule=config.eval_schedule
         )
 

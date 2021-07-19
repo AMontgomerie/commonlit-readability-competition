@@ -40,8 +40,8 @@ class Trainer:
         optimizer: Optimizer,
         scheduler,
         criterion: nn.Module,
-        seed: int,
-        save_path: str,
+        seed: int = 0,
+        save_path: str = "output",
         print_step: int = 10,
         eval_schedule: List[Tuple[float, int]] = DEFAULT_SCHEDULE
     ) -> None:
