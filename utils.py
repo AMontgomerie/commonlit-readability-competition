@@ -21,6 +21,7 @@ class AverageMeter(object):
         self.val = 0
         self.avg = 0
         self.sum = 0
+        self.count = 0
 
     def update(self, val: float, n: int = 1) -> None:
         self.val = val
