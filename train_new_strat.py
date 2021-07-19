@@ -38,7 +38,11 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
 
         if config.use_diff_lr:
             print('yes')
-            optimizer_parameters = get_optimizer_params(model, group_type='b')
+            optimizer_parameters = get_optimizer_params(
+                config.learning_rate,
+                model=model,
+                group_type='b'
+            )
 
         else:
             param_optimizer = list(model.named_parameters())
