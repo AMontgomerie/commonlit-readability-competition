@@ -6,7 +6,6 @@ import pandas as pd
 import numpy as np
 from transformers import AutoTokenizer
 from typing import List, Tuple
-import tqdm
 from sklearn.metrics import mean_squared_error
 
 from training import Config
@@ -83,7 +82,7 @@ def oof_out(
     fin_tar = []
     fin_id = []
 
-    for batch in tqdm(dataloader, total=len(dataloader)):
+    for batch in dataloader:
         input_ids = batch[0].to(device)
         attention_mask = batch[1].to(device)
         targets = batch[2].to(device)
