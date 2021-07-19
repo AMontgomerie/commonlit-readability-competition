@@ -47,5 +47,4 @@ class TransformerWithAttentionHead(nn.Module):
     def forward(self, input_ids: Tensor, attention_mask: Tensor) -> SimpleNamespace:
         transformer_out = self.transformer(input_ids, attention_mask)
         x = self.attention(transformer_out.last_hidden_state)
-        x = self.regressor(x)
-        return SimpleNamespace(logits=x)
+        return self.regressor(x)
