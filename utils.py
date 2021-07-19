@@ -3,14 +3,8 @@ import torch.nn as nn
 import random
 import os
 import numpy as np
-from transformers import (
-    get_constant_schedule_with_warmup,
-    get_cosine_schedule_with_warmup,
-    get_linear_schedule_with_warmup
-)
 from typing import Any, List, Mapping
 from torch import Tensor
-from torch.optim import Optimizer
 
 
 class AverageMeter(object):

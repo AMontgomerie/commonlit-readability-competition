@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 from transformers import AutoTokenizer
-from typing import List, Tuple,
+from typing import List, Tuple
 import tqdm
 from sklearn.metrics import mean_squared_error
 
