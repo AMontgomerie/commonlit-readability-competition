@@ -38,7 +38,7 @@ class TransformerWithAttentionHead(nn.Module):
             "layer_norm_eps": layer_norm_eps
         })
         self.transformer = AutoModel.from_pretrained(transformer_checkpoint, config=config)
-        self.attn_head = AttentionHead(
+        self.attention = AttentionHead(
             in_size=config.hidden_size,
             hidden_size=attn_hidden_size
         )
@@ -46,6 +46,6 @@ class TransformerWithAttentionHead(nn.Module):
 
     def forward(self, input_ids: Tensor, attention_mask: Tensor) -> SimpleNamespace:
         transformer_out = self.transformer(input_ids, attention_mask)
-        x = self.attn_head(transformer_out.last_hidden_state)
+        x = self.attention(transformer_out.last_hidden_state)
         x = self.regressor(x)
         return SimpleNamespace(logits=x)
