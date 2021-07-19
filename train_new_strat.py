@@ -33,7 +33,7 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
 
 
 def train_fold(data: pd.DataFrame, tokenizer: AutoTokenizer, fold: int, config: Config) -> None:
-    print(f'Starting for fold {fold} and seed {config.seed+fold} \n')
+    print(f"Starting for fold {fold} and seed {config.seed+fold}")
     seed_everything(config.seed+fold)
 
     train_loader, valid_loader = make_loaders(
@@ -50,7 +50,6 @@ def train_fold(data: pd.DataFrame, tokenizer: AutoTokenizer, fold: int, config: 
     criterion.to(config.device)
 
     if config.use_diff_lr:
-        print('yes')
         optimizer_parameters = get_optimizer_params(
             config.learning_rate,
             model=model,
@@ -73,7 +72,7 @@ def train_fold(data: pd.DataFrame, tokenizer: AutoTokenizer, fold: int, config: 
                     p for n, p in param_optimizer
                     if any(nd in n for nd in no_decay)
                 ],
-                'weight_decay': 0.0
+                'weight_decay': config.weight_decay
             },
         ]
 
@@ -97,7 +96,7 @@ def train_fold(data: pd.DataFrame, tokenizer: AutoTokenizer, fold: int, config: 
         eval_schedule=config.eval_schedule
     )
 
-    best_score = 100000
+    best_score = 1.
     for epoch in range(config.epochs):
         print("\n\n")
         print(f"###### BEGINNING EPOCH {epoch+1} ##########")
