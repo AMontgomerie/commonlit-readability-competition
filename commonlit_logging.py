@@ -60,7 +60,7 @@ def make_oofs(
             num_workers=config.num_workers
         )
         path_to_model = os.path.join(
-            config.save_path, f"config.model_name_{fold}_{config.seed+fold}.bin"
+            config.save_path, f"{config.model_name}_{fold}_{config.seed+fold}.bin"
         )
         model.load_state_dict(torch.load(path_to_model, map_location=config.device))
 
