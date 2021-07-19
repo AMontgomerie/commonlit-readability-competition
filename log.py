@@ -1,11 +1,13 @@
+import os
 import torch
 from torch.nn import Module
 from torch.utils.data import DataLoader
 import pandas as pd
 import numpy as np
 from transformers import AutoTokenizer
-from typing import List, Tuple, Any
+from typing import List, Tuple,
 import tqdm
+from sklearn.metrics import mean_squared_error
 
 from training import Config
 from models import TransformerWithAttentionHead
@@ -13,30 +15,22 @@ from utils import seed_everything
 from data_prep import ReadabilityDataset
 
 
-@torch.no_grad()
-def oof_out(
-    dataloader: DataLoader, model: Module, device: torch.device
-) -> Tuple[List, List, List]:
-    model.eval()
-    fin_out = []
-    fin_tar = []
-    fin_id = []
+def generate_oof_and_log(
+        data: pd.DataFrame, tokenizer: AutoTokenizer, config: Config, loss_cv: List[int]):
+    oof_pred, oof_tar, oof_id, oof_fold = make_oofs(data, tokenizer, config)
+    oof = np.concatenate(oof_pred)
+    true = np.concatenate(oof_tar)
+    id = np.concatenate(oof_id)
+    folds = np.concatenate(oof_fold)
+    oof_rmse = mean_squared_error(true, oof, squared=False)
+    print('Overall OOF RMSE = %.3f' % oof_rmse)
 
-    for batch in tqdm(dataloader, total=len(dataloader)):
-        input_ids = batch[0].to(device)
-        attention_mask = batch[1].to(device)
-        targets = batch[2].to(device)
-        ids = batch[3]
+    df_oof = pd.DataFrame({
+        "id": id, "target": true, "pred": oof, "fold": folds
+    })
+    df_oof.to_csv(os.path.join(config.save_path, "roberta_oof.csv"), index=False)
 
-        output = model(input_ids, attention_mask)
-        output = output.squeeze(1).detach().cpu().numpy()
-        targets = targets.detach().cpu().numpy()
-
-        fin_out.append(output)
-        fin_tar.append(targets)
-        fin_id.append(ids)
-
-    return np.concatenate(fin_out), np.concatenate(fin_tar), np.concatenate(fin_id)
+    save_log(config.save_path, loss_cv, oof_rmse, config)
 
 
 def make_oofs(
@@ -75,6 +69,32 @@ def make_oofs(
         oof_fold.append([fold]*len(valid_ids))
 
     return oof_pred, oof_tar, oof_id, oof_fold
+
+
+@torch.no_grad()
+def oof_out(
+    dataloader: DataLoader, model: Module, device: torch.device
+) -> Tuple[List, List, List]:
+    model.eval()
+    fin_out = []
+    fin_tar = []
+    fin_id = []
+
+    for batch in tqdm(dataloader, total=len(dataloader)):
+        input_ids = batch[0].to(device)
+        attention_mask = batch[1].to(device)
+        targets = batch[2].to(device)
+        ids = batch[3]
+
+        output = model(input_ids, attention_mask)
+        output = output.squeeze(1).detach().cpu().numpy()
+        targets = targets.detach().cpu().numpy()
+
+        fin_out.append(output)
+        fin_tar.append(targets)
+        fin_id.append(ids)
+
+    return np.concatenate(fin_out), np.concatenate(fin_tar), np.concatenate(fin_id)
 
 
 def save_log(save_path: str, loss_cv: List[float], rmse: float, config: Config) -> None:
