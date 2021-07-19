@@ -68,35 +68,6 @@ def fetch_loss(ltype: str = 'mse') -> Tensor:
     return loss
 
 
-def fetch_scheduler(
-    scheduler_type: str,
-    optimizer: Optimizer,
-    warm_up: int,
-    total_steps: int = None
-) -> Any:
-    if scheduler_type == 'linear':
-        scheduler = get_linear_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=warm_up,
-            num_training_steps=total_steps,
-        )
-
-    elif scheduler_type == 'cos':
-        scheduler = get_cosine_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=warm_up,
-            num_training_steps=total_steps,
-        )
-
-    else:
-        scheduler = get_constant_schedule_with_warmup(
-            optimizer,
-            num_warmup_steps=warm_up
-        )
-
-    return scheduler
-
-
 def get_optimizer_params(learning_rate: float, model: nn.Module, group_type: str = 'a') -> List[Mapping[str, Any]]:
     '''
     Differential LR and Weight Decay

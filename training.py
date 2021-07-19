@@ -27,9 +27,10 @@ class Config:
     loss_type: str = "mse"
     use_diff_lr: bool = True
     model_checkpoint: str = "microsoft/deberta-large"
-    scheduler: str = "cos"
+    scheduler: str = "cosine"
     seed: int = 1000
     save_path: str = "output"
+    warmup: int = 50
 
 
 class Trainer:

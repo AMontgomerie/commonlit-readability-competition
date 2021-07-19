@@ -2,11 +2,11 @@ import os
 import pandas as pd
 import numpy as np
 from torch.optim import AdamW
-from transformers import AutoTokenizer
+from transformers import AutoTokenizer, get_scheduler
 from typing import List
 from sklearn.metrics import mean_squared_error
 
-from utils import seed_everything, fetch_loss, get_optimizer_params, fetch_scheduler
+from utils import seed_everything, fetch_loss, get_optimizer_params
 from data_prep import make_loaders
 from models import TransformerWithAttentionHead
 from training import Trainer, Config
@@ -70,7 +70,7 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
             weight_decay=config.weight_decay
         )
         total_steps = len(train_loader)*config.epochs
-        scheduler = fetch_scheduler(optimizer, 50, total_steps)
+        scheduler = get_scheduler(config.scheduler, optimizer, config.warmup, total_steps)
 
         trainer = Trainer(model, optimizer, scheduler, criterion, seed=fold+config.seed)
 
