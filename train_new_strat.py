@@ -86,6 +86,7 @@ def train_fold(data: pd.DataFrame, tokenizer: AutoTokenizer, fold: int, config: 
     scheduler = get_scheduler(config.scheduler, optimizer, config.warmup, total_steps)
 
     trainer = Trainer(
+        config.model_name,
         model,
         optimizer,
         scheduler,

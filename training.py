@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 import torch.nn as nn
@@ -31,11 +32,13 @@ class Config:
     seed: int = 1000
     save_path: str = "output"
     warmup: int = 50
+    model_name: str = "deberta-large"
 
 
 class Trainer:
     def __init__(
         self,
+        model_name: str,
         model: nn.Module,
         optimizer: Optimizer,
         scheduler,
@@ -46,6 +49,7 @@ class Trainer:
         eval_schedule: List[Tuple[float, int]] = DEFAULT_SCHEDULE
     ) -> None:
         self.model = model
+        self.model_name = model_name
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.criterion = criterion
@@ -106,7 +110,7 @@ class Trainer:
                     best_score = self.valid_score
                     torch.save(
                         self.model.state_dict(),
-                        f"{self.save_path}_{fold}_{self.seed}.bin"
+                        os.path.join(self.save_path, f"{self.model_name}_{fold}_{self.seed}.bin")
                     )
                     print(f'Best model found for epoch {epoch+1} for step {bi}')
 
