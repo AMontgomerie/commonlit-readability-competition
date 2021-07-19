@@ -77,9 +77,9 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
             optimizer,
             scheduler,
             criterion,
-            seed=fold+config.seed,
             config.save_path,
-            config.eval_schedule
+            seed=fold+config.seed,
+            eval_schedule=config.eval_schedule
         )
 
         best_score = 100000
