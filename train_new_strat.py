@@ -72,7 +72,15 @@ def train_cv(data: pd.DataFrame, folds: List[int], config: Config) -> None:
         total_steps = len(train_loader)*config.epochs
         scheduler = get_scheduler(config.scheduler, optimizer, config.warmup, total_steps)
 
-        trainer = Trainer(model, optimizer, scheduler, criterion, seed=fold+config.seed)
+        trainer = Trainer(
+            model,
+            optimizer,
+            scheduler,
+            criterion,
+            seed=fold+config.seed,
+            config.save_path,
+            config.eval_schedule
+        )
 
         best_score = 100000
         for epoch in range(config.epochs):
