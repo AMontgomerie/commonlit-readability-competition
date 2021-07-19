@@ -88,7 +88,7 @@ def fetch_scheduler(
             num_training_steps=total_steps,
         )
 
-    elif scheduler_type == 'constant':
+    else:
         scheduler = get_constant_schedule_with_warmup(
             optimizer,
             num_warmup_steps=warm_up
