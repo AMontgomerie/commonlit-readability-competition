@@ -97,7 +97,7 @@ def fetch_scheduler(
     return scheduler
 
 
-def get_optimizer_params(learning_rate, model: nn.Module, group_type: str = 'a') -> List[Mapping[str, Any]]:
+def get_optimizer_params(learning_rate: float, model: nn.Module, group_type: str = 'a') -> List[Mapping[str, Any]]:
     '''
     Differential LR and Weight Decay
     '''
