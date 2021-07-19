@@ -59,7 +59,10 @@ def make_oofs(
             drop_last=False,
             num_workers=config.num_workers
         )
-        model.load_state_dict(torch.load("{config.save_path}_{fold}", map_location=config.device))
+        path_to_model = os.path.join(
+            config.save_path, f"config.model_name_{fold}_{config.seed+fold}.bin"
+        )
+        model.load_state_dict(torch.load(path_to_model, map_location=config.device))
 
         valid_out, valid_tar, valid_ids = oof_out(valid_loader, model, config.device)
 
