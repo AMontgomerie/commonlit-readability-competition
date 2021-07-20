@@ -40,7 +40,7 @@ def generate_oof_and_log(
 def make_oofs(
     data: pd.DataFrame,
     tokenizer: AutoTokenizer,
-    config: Config
+    config: Config,
     model_dir: str = None
 ) -> Tuple[List, List, List, List]:
     oof_id = []
