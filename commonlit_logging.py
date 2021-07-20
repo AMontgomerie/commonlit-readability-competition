@@ -32,7 +32,7 @@ def generate_oof_and_log(
     df_oof = pd.DataFrame({
         "id": id, "target": true, "pred": oof, "fold": folds
     })
-    df_oof.to_csv(os.path.join(config.save_path, "roberta_oof.csv"), index=False)
+    df_oof.to_csv(os.path.join(config.save_path, f"{config.model_name}_oof.csv"), index=False)
 
     save_log(config.save_path, loss_cv, oof_rmse, config)
 
