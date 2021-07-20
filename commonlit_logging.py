@@ -61,6 +61,7 @@ def make_oofs(
         path_to_model = os.path.join(
             config.save_path, f"{config.model_name}_{fold}_{config.seed+fold}.bin"
         )
+        print(f"loading from {path_to_model}")
         model.load_state_dict(torch.load(path_to_model, map_location=config.device))
 
         valid_out, valid_tar, valid_ids = oof_out(valid_loader, model, config.device)
