@@ -53,7 +53,6 @@ class Trainer:
         self.optimizer = optimizer
         self.scheduler = scheduler
         self.criterion = criterion
-        self.evaluator = Evaluator(self.model)
         self.eval_steps = eval_schedule[0][1]
         self.eval_schedule = eval_schedule
         self.last_eval_step = 0
@@ -96,7 +95,7 @@ class Trainer:
 
             if self.step >= self.last_eval_step + self.eval_steps:
                 self.last_eval_step = self.step
-                self.valid_score = self.evaluator.evaluate(valid_loader, device, self.criterion)
+                self.valid_score = self.evaluate(self.model, valid_loader, device, self.criterion)
                 print(
                     f"Valid Score at Step {bi} for Epoch {epoch+1}: {self.valid_score}, Step Size: {self.eval_steps}"
                 )
@@ -118,12 +117,7 @@ class Trainer:
 
         return best_score
 
-
-@torch.no_grad()
-class Evaluator:
-    def __init__(self, model):
-        self.model = model
-
+    @torch.no_grad()
     def evaluate(
         self,
         dataloader: DataLoader,
