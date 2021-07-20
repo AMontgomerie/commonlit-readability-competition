@@ -15,8 +15,13 @@ from data_prep import ReadabilityDataset
 
 
 def generate_oof_and_log(
-        data: pd.DataFrame, tokenizer: AutoTokenizer, config: Config, loss_cv: List[int]):
-    oof_pred, oof_tar, oof_id, oof_fold = make_oofs(data, tokenizer, config)
+    data: pd.DataFrame,
+    tokenizer: AutoTokenizer,
+    config: Config,
+    loss_cv: List[int],
+    model_dir: str = None
+) -> None:
+    oof_pred, oof_tar, oof_id, oof_fold = make_oofs(data, tokenizer, config, model_dir)
     oof = np.concatenate(oof_pred)
     true = np.concatenate(oof_tar)
     id = np.concatenate(oof_id)
@@ -36,11 +41,14 @@ def make_oofs(
     data: pd.DataFrame,
     tokenizer: AutoTokenizer,
     config: Config
+    model_dir: str = None
 ) -> Tuple[List, List, List, List]:
     oof_id = []
     oof_fold = []
     oof_pred = []
     oof_tar = []
+
+    print("Generating OOF csv...")
 
     model = TransformerWithAttentionHead(config.model_checkpoint)
     model.to(config.device)
@@ -58,9 +66,14 @@ def make_oofs(
             drop_last=False,
             num_workers=config.num_workers
         )
-        path_to_model = os.path.join(
-            config.save_path, f"{config.model_name}_{fold}_{config.seed+fold}.bin"
-        )
+        if model_dir:
+            path_to_model = os.path.join(
+                model_dir, f"{config.model_name}_{fold}_{config.seed+fold}.bin"
+            )
+        else:
+            path_to_model = os.path.join(
+                config.save_path, f"{config.model_name}_{fold}_{config.seed+fold}.bin"
+            )
         print(f"loading from {path_to_model}")
         model.load_state_dict(torch.load(path_to_model, map_location=config.device))
 
