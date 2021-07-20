@@ -95,7 +95,7 @@ class Trainer:
 
             if self.step >= self.last_eval_step + self.eval_steps:
                 self.last_eval_step = self.step
-                self.valid_score = self.evaluate(self.model, valid_loader, device, self.criterion)
+                self.valid_score = self.evaluate(valid_loader, device, self.criterion)
                 print(
                     f"Valid Score at Step {bi} for Epoch {epoch+1}: {self.valid_score}, Step Size: {self.eval_steps}"
                 )
