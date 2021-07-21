@@ -4,7 +4,6 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 from transformers import AutoConfig, AutoModel
-from types import SimpleNamespace
 
 
 class AttentionHead(nn.Module):
@@ -44,7 +43,7 @@ class TransformerWithAttentionHead(nn.Module):
         )
         self.regressor = nn.Linear(config.hidden_size, 1)
 
-    def forward(self, input_ids: Tensor, attention_mask: Tensor) -> SimpleNamespace:
+    def forward(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
         transformer_out = self.transformer(input_ids, attention_mask)
         x = self.attention(transformer_out.last_hidden_state)
         return self.regressor(x)
