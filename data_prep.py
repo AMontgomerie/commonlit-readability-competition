@@ -40,7 +40,7 @@ class ReadabilityDataset(Dataset):
         std_error = row.standard_error
 
         if self.target_sample:
-            target = self.add_target_sampling(target, std_error)
+            target = self.add_target_sample(target, std_error)
 
         target = torch.tensor(target, dtype=torch.float)
 
