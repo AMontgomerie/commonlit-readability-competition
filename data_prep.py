@@ -37,9 +37,9 @@ class ReadabilityDataset(Dataset):
         attention_mask = text['attention_mask'][0]
 
         target = row.target
+        std_error = row.standard_error
 
         if self.target_sample:
-            std_error = self.standard_errors[index]
             target = self.add_target_sampling(target, std_error)
 
         target = torch.tensor(target, dtype=torch.float)
