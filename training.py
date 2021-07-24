@@ -33,6 +33,7 @@ class Config:
     save_path: str = "output"
     warmup: int = 50
     model_name: str = "deberta-large"
+    target_sample: bool = False
 
 
 class Trainer:

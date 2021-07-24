@@ -42,7 +42,8 @@ def train_fold(data: pd.DataFrame, tokenizer: AutoTokenizer, fold: int, config: 
         fold,
         train_bs=config.train_batch_size,
         valid_bs=config.valid_batch_size,
-        num_workers=config.num_workers
+        num_workers=config.num_workers,
+        target_sample=config.target_sample
     )
     model = TransformerWithAttentionHead(config.model_checkpoint)
     model.to(config.device)

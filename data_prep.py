@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 import torch
 from torch import Tensor
@@ -7,10 +8,17 @@ from transformers import AutoTokenizer
 
 
 class ReadabilityDataset(Dataset):
-    def __init__(self, data: pd.DataFrame, tokenizer: AutoTokenizer, max_len: int = 248) -> None:
+    def __init__(
+        self,
+        data: pd.DataFrame,
+        tokenizer: AutoTokenizer,
+        max_len: int = 248,
+        target_sample: bool = False
+    ) -> None:
         self.data = data.reset_index()
         self.tokenizer = tokenizer
         self.max_len = max_len
+        self.target_sample = target_sample
 
     def __len__(self):
         return self.data.shape[0]
@@ -27,9 +35,19 @@ class ReadabilityDataset(Dataset):
         )
         input_ids = text['input_ids'][0]
         attention_mask = text['attention_mask'][0]
-        target = torch.tensor(row.target, dtype=torch.float)
+
+        target = row.target
+
+        if self.target_sample:
+            std_error = self.standard_errors[index]
+            target = self.add_target_sampling(target, std_error)
+
+        target = torch.tensor(target, dtype=torch.float)
 
         return input_ids, attention_mask, target, row.id
+
+    def add_target_sample(self, target, std):
+        return np.random.normal(target, std)
 
 
 def make_loaders(
@@ -38,12 +56,13 @@ def make_loaders(
     fold: int,
     train_bs: int = 16,
     valid_bs: int = 32,
-    num_workers: int = 4
+    num_workers: int = 4,
+    target_sample: bool = False
 ) -> Tuple[DataLoader, DataLoader]:
     train = data[data['kfold'] != fold].reset_index(drop=True)
     valid = data[data['kfold'] == fold].reset_index(drop=True)
 
-    train_dataset = ReadabilityDataset(train, tokenizer)
+    train_dataset = ReadabilityDataset(train, tokenizer, target_sample=target_sample)
     valid_dataset = ReadabilityDataset(valid, tokenizer)
 
     train_loader = torch.utils.data.DataLoader(
