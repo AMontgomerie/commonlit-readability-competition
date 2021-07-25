@@ -19,7 +19,7 @@ from typing import Mapping
 from sklearn.metrics import mean_squared_error
 from types import SimpleNamespace
 
-#from .model_with_extra_attention import CLRPModel
+from models import TransformerWithAttentionHead
 
 DEVICE = torch.device("cuda")
 
@@ -183,8 +183,7 @@ class CommonLitDataset(Dataset):
         return np.random.normal(target, std)
 
 
-def get_model(checkpoint, hidden_dropout, attention_dropout):
-
+def get_model(checkpoint, hidden_dropout, attention_dropout, extra_attention):
     # the naming of the dropout params depends on the model architecture
     if checkpoint.startswith("xlnet") or checkpoint.startswith("transfo-xl"):
         print("Assigning dropout=hidden_dropout.")
@@ -205,10 +204,14 @@ def get_model(checkpoint, hidden_dropout, attention_dropout):
             "attention_probs_dropout_prob": attention_dropout,
         }
 
-    return AutoModelForSequenceClassification.from_pretrained(
-        checkpoint,
-        **transformer_config
-    ).to(DEVICE)
+    if extra_attention:
+        return TransformerWithAttentionHead(checkpoint, hidden_dropout_prob=hidden_dropout)
+
+    else:
+        return AutoModelForSequenceClassification.from_pretrained(
+            checkpoint,
+            **transformer_config
+        ).to(DEVICE)
 
 
 def train(

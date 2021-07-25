@@ -27,7 +27,7 @@ class TransformerWithAttentionHead(nn.Module):
         transformer_checkpoint: str,
         attn_hidden_size: int = 768,
         hidden_dropout_prob: float = 0.0,
-        layer_norm_eps: float = 1e-7
+        layer_norm_eps: float = 1e-7,
     ) -> None:
         super(TransformerWithAttentionHead, self).__init__()
         config = AutoConfig.from_pretrained(transformer_checkpoint)
