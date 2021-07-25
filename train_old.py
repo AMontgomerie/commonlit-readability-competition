@@ -250,8 +250,6 @@ def train(
         for step, batch in enumerate(train_loader):
             optimizer.zero_grad()
             output = model(batch["input_ids"], batch["attention_mask"])
-            print(output.logits.shape)
-            print(batch["labels"].shape)
             loss = torch.sqrt(criterion(torch.squeeze(output.logits), batch["labels"]))
             loss.backward()
             optimizer.step()

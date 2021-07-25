@@ -48,9 +48,10 @@ class TransformerWithAttentionHead(nn.Module):
 
     def forward(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
         transformer_out = self.transformer(input_ids, attention_mask)
-        x = self.attention(transformer_out.last_hidden_state)
+        attention_out = self.attention(transformer_out.last_hidden_state)
+        regressor_out = self.regressor(attention_out)
 
         if self.return_simplenamespace:
-            return SimpleNamespace(logits=x)
+            return SimpleNamespace(logits=regressor_out)
         else:
-            return self.regressor(x)
+            return regressor_out
