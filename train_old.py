@@ -399,7 +399,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         seed_everything(config.random_seed)
 
     tokenizer = AutoTokenizer.from_pretrained(config.checkpoint)
-    path = os.path.join(os.path.dirname(__file__), "..", "data", "train_folds.csv")
+    path = os.path.join(os.path.dirname(__file__), "data", "train_folds.csv")
     data = pd.read_csv(path)
     folds = data.kfold.unique()
     scores = []
