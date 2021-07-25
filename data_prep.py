@@ -40,7 +40,9 @@ class ReadabilityDataset(Dataset):
         std_error = row.standard_error
 
         if self.target_sample:
+            print(target)
             target = self.add_target_sample(target, std_error)
+            print("after:", target)
 
         target = torch.tensor(target, dtype=torch.float)
 
