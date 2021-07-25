@@ -1,5 +1,6 @@
 """Based on https://www.kaggle.com/chamecall/clrp-finetune"""
 
+from types import SimpleNamespace
 import torch
 import torch.nn as nn
 from torch import Tensor
@@ -28,6 +29,7 @@ class TransformerWithAttentionHead(nn.Module):
         attn_hidden_size: int = 768,
         hidden_dropout_prob: float = 0.0,
         layer_norm_eps: float = 1e-7,
+        return_simplenamespace: bool = False
     ) -> None:
         super(TransformerWithAttentionHead, self).__init__()
         config = AutoConfig.from_pretrained(transformer_checkpoint)
@@ -42,8 +44,13 @@ class TransformerWithAttentionHead(nn.Module):
             hidden_size=attn_hidden_size
         )
         self.regressor = nn.Linear(config.hidden_size, 1)
+        self.return_simplenamespace = return_simplenamespace
 
     def forward(self, input_ids: Tensor, attention_mask: Tensor) -> Tensor:
         transformer_out = self.transformer(input_ids, attention_mask)
         x = self.attention(transformer_out.last_hidden_state)
-        return self.regressor(x)
+
+        if self.return_simplenamespace:
+            return SimpleNamespace(logits=x)
+        else:
+            return self.regressor(x)

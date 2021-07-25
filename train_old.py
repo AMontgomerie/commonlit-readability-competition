@@ -207,7 +207,8 @@ def get_model(checkpoint, hidden_dropout, attention_dropout, extra_attention):
     if extra_attention:
         return TransformerWithAttentionHead(
             checkpoint,
-            hidden_dropout_prob=hidden_dropout
+            hidden_dropout_prob=hidden_dropout,
+            return_simplenamespace=True
         ).to(DEVICE)
 
     else:
