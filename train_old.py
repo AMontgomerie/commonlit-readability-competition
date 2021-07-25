@@ -221,6 +221,7 @@ def train(
         config.checkpoint,
         config.hidden_dropout,
         config.attention_dropout,
+        config.extra_attention_head
     )
     model.train()
     train_loader = DataLoader(train_set, shuffle=True, batch_size=config.batch_size)
