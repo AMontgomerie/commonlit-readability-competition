@@ -20,6 +20,7 @@ from sklearn.metrics import mean_squared_error
 from types import SimpleNamespace
 
 from models import TransformerWithAttentionHead
+from utils import seed_everything
 
 DEVICE = torch.device("cuda")
 
@@ -431,13 +432,6 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         gc.collect()
 
     return sum(scores) / len(scores)
-
-
-def seed_everything(seed=0):
-    os.environ["PYTHONASSEED"] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
 
 
 if __name__ == "__main__":
