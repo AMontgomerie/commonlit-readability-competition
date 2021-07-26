@@ -412,7 +412,7 @@ def train_cv(
     data = pd.read_csv(path)
     scores = []
 
-    print(f"Training {config.checkpoint} for {len(folds)} folds in reverse order with:")
+    print(f"Training {config.checkpoint} for {len(folds)} folds:")
     print(config)
 
     for fold in folds:
