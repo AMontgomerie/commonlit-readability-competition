@@ -15,7 +15,7 @@ from transformers import (
     get_cosine_schedule_with_warmup,
     get_linear_schedule_with_warmup,
 )
-from typing import Mapping
+from typing import Mapping, List
 from sklearn.metrics import mean_squared_error
 from types import SimpleNamespace
 
@@ -399,7 +399,10 @@ def save(
         model.save_pretrained(path)
 
 
-def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
+def train_cv(
+    config: Mapping = DEFAULT_CONFIG,
+    folds: List[int] = [0, 1, 2, 3, 4]
+) -> List[float]:
 
     if config.random_seed:
         seed_everything(config.random_seed)
@@ -407,13 +410,12 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
     tokenizer = AutoTokenizer.from_pretrained(config.checkpoint)
     path = os.path.join(os.path.dirname(__file__), "data", "train_folds.csv")
     data = pd.read_csv(path)
-    folds = data.kfold.unique()
     scores = []
 
     print(f"Training {config.checkpoint} for {len(folds)} folds in reverse order with:")
     print(config)
 
-    for fold in reversed(folds):
+    for fold in folds:
         train_set = CommonLitDataset(
             data[data.kfold != fold],
             tokenizer,
