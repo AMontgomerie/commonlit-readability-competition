@@ -431,7 +431,7 @@ def train_cv(config: Mapping = DEFAULT_CONFIG) -> float:
         del trained_model
         gc.collect()
 
-    return sum(scores) / len(scores)
+    return scores
 
 
 if __name__ == "__main__":
