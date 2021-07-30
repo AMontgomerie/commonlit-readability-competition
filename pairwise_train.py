@@ -190,6 +190,7 @@ def parse_args():
     parser.add_argument("--accumulation_steps", type=int, default=1, required=False)
     parser.add_argument("--fulldata", action="store_true")
     parser.add_argument("--num_samples", type=int, required=True)
+    parser.add_argument("--early_stopping_patience", type=int, default=5, required=False)
     return parser.parse_args()
 
 
@@ -240,6 +241,7 @@ if __name__ == "__main__":
         monitor="valid_rmse",
         model_path=output_path,
         save_weights_only=True,
+        patience=args.early_stopping_patience
     )
     train_sampler = RandomSampler(
         train_dataset,
