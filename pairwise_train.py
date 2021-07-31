@@ -258,4 +258,3 @@ if __name__ == "__main__":
         callbacks=[es],
         fp16=True,
     )
-    model.save(output_path, weights_only=True)
