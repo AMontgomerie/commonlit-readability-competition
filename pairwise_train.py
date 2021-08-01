@@ -207,7 +207,7 @@ if __name__ == "__main__":
         f"{args.model.replace('/',':')}__fold_{args.fold}.bin",
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(args.model)
-    df = pd.read_csv("/content/drive/MyDrive/commonlit/train_folds.csv")
+    df = pd.read_csv("train_folds.csv")
     # base string is excerpt where target is 0 in the dataframe
     base_string = df.loc[df.target == 0, "excerpt"].values[0]
     # create dictionary out of excerpt and target columns from dataframe
