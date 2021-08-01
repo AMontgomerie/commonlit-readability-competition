@@ -33,13 +33,14 @@ class AttentionHead(nn.Module):
 
 
 class CommonlitModel(tez.Model):
-    def __init__(self, model_name, num_train_steps, steps_per_epoch, learning_rate):
+    def __init__(self, model_name, num_train_steps, steps_per_epoch, learning_rate, loss_type):
         super().__init__()
         self.learning_rate = learning_rate
         self.steps_per_epoch = steps_per_epoch
         self.model_name = model_name
         self.num_train_steps = num_train_steps
         self.step_scheduler_after = "batch"
+        self.loss_type = loss_type
         hidden_dropout_prob: float = 0.0
         layer_norm_eps: float = 1e-7
         config = transformers.AutoConfig.from_pretrained(model_name)
@@ -78,8 +79,13 @@ class CommonlitModel(tez.Model):
         )
         return sch
 
-    def loss(self, outputs, targets):
-        return torch.sqrt(nn.MSELoss()(outputs, targets))
+    def loss(self, outputs, targets, standard_errors):
+        if self.loss_type == "rmse":
+            return torch.sqrt(nn.MSELoss()(outputs, targets))
+        elif self.loss_type == "custom":
+            return torch.sqrt((torch.square(outputs - targets) * standard_errors).sum())
+        else:
+            raise ValueError(f"unrecognized loss function: {self.loss_type}")
 
     def monitor_metrics(self, outputs, targets):
         outputs = outputs.cpu().detach().numpy()[:, 1].ravel()
@@ -88,26 +94,27 @@ class CommonlitModel(tez.Model):
         rmse = np.sqrt(mse)
         return {"rmse": rmse, "mse": mse}
 
-    def forward(self, ids1, mask1, ids2, mask2, targets=None):
+    def forward(self, ids1, mask1, ids2, mask2, targets=None, standard_errors=None):
         output1 = self.transformer(ids1, mask1)
         output2 = self.transformer(ids2, mask2)
         output1 = self.attention(output1.last_hidden_state)
         output2 = self.attention(output2.last_hidden_state)
         output = torch.cat((output1, output2), dim=1)
         output = self.regressor(output)
-        # output = self.regressor(output.pooler_output)
-        loss = self.loss(output, targets)
+        loss = self.loss(output, targets, standard_errors)
         acc = self.monitor_metrics(output, targets)
         return output, loss, acc
 
 
 class CommonlitDataset:
-    def __init__(self, excerpts, target_dict, tokenizer, max_len, num_samples=None):
+    def __init__(self, excerpts, standard_error_dict, target_dict, tokenizer, max_len,
+                 num_samples=None):
         self.excerpts = excerpts
         self.target_dict = target_dict
         self.tokenizer = tokenizer
         self.max_len = max_len
         self.num_samples = num_samples
+        self.standard_error_dict = standard_error_dict
 
     def __len__(self):
         return len(self.excerpts)
@@ -116,18 +123,11 @@ class CommonlitDataset:
         text1 = str(self.excerpts[item][1])
         text2 = str(self.excerpts[item][0])
         target = [self.target_dict[text2], self.target_dict[text1]]
-        inputs1 = self.tokenizer(
-            text1,
-            max_length=self.max_len,
-            padding="max_length",
-            truncation=True
-        )
-        inputs2 = self.tokenizer(
-            text2,
-            max_length=self.max_len,
-            padding="max_length",
-            truncation=True
-        )
+        standard_errors = [self.standard_error_dict[text2], self.standard_error_dict[text1]]
+        inputs1 = self.tokenizer(text1, max_length=self.max_len,
+                                 padding="max_length", truncation=True)
+        inputs2 = self.tokenizer(text2, max_length=self.max_len,
+                                 padding="max_length", truncation=True)
         ids1 = inputs1["input_ids"]
         mask1 = inputs1["attention_mask"]
         ids2 = inputs2["input_ids"]
@@ -138,6 +138,7 @@ class CommonlitDataset:
             "ids2": torch.tensor(ids2, dtype=torch.long),
             "mask2": torch.tensor(mask2, dtype=torch.long),
             "targets": torch.tensor(target, dtype=torch.float),
+            "standard_errors": torch.tensor(standard_errors, dtype=torch.float)
         }
 
 
@@ -191,6 +192,7 @@ def parse_args():
     parser.add_argument("--fulldata", action="store_true")
     parser.add_argument("--num_samples", type=int, required=True)
     parser.add_argument("--early_stopping_patience", type=int, default=5, required=False)
+    parser.add_argument("--loss_type", type=str, default="rmse", required=False)
     return parser.parse_args()
 
 
@@ -205,11 +207,12 @@ if __name__ == "__main__":
         f"{args.model.replace('/',':')}__fold_{args.fold}.bin",
     )
     tokenizer = transformers.AutoTokenizer.from_pretrained(args.model)
-    df = pd.read_csv("train_folds.csv")
+    df = pd.read_csv("/content/drive/MyDrive/commonlit/train_folds.csv")
     # base string is excerpt where target is 0 in the dataframe
     base_string = df.loc[df.target == 0, "excerpt"].values[0]
     # create dictionary out of excerpt and target columns from dataframe
     target_dict = dict(zip(df.excerpt.values.tolist(), df.target.values.tolist()))
+    standard_error_dict = dict(zip(df.excerpt.values.tolist(), df.standard_error.tolist()))
     df_train = df[df.kfold != args.fold].reset_index(drop=True)
     df_valid = df[df.kfold == args.fold].reset_index(drop=True)
     training_pairs = list(itertools.combinations(df_train.excerpt.values.tolist(), 2))
@@ -220,6 +223,7 @@ if __name__ == "__main__":
     train_dataset = CommonlitDataset(
         excerpts=training_pairs,
         target_dict=target_dict,
+        standard_error_dict=standard_error_dict,
         tokenizer=tokenizer,
         max_len=args.max_len,
         num_samples=args.num_samples,
@@ -227,6 +231,7 @@ if __name__ == "__main__":
     valid_dataset = CommonlitDataset(
         excerpts=validation_pairs,
         target_dict=target_dict,
+        standard_error_dict=standard_error_dict,
         tokenizer=tokenizer,
         max_len=args.max_len,
     )
@@ -236,6 +241,8 @@ if __name__ == "__main__":
         num_train_steps=n_train_steps,
         learning_rate=args.learning_rate,
         steps_per_epoch=args.num_samples / args.batch_size,
+        loss_type=args.loss_type
+
     )
     es = tez.callbacks.EarlyStopping(
         monitor="valid_rmse",
@@ -251,6 +258,8 @@ if __name__ == "__main__":
         train_dataset,
         valid_dataset=valid_dataset,
         train_sampler=train_sampler,
+        train_shuffle=False,
+        valid_shuffle=False,
         train_bs=args.batch_size,
         valid_bs=64,
         device="cuda",
