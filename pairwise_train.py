@@ -193,6 +193,7 @@ def parse_args():
     parser.add_argument("--num_samples", type=int, required=True)
     parser.add_argument("--early_stopping_patience", type=int, default=5, required=False)
     parser.add_argument("--loss_type", type=str, default="rmse", required=False)
+    parser.add_argument("--seed", type=int, default=42, required=False)
     return parser.parse_args()
 
 
@@ -200,7 +201,7 @@ if __name__ == "__main__":
     args = parse_args()
 
     if not args.fulldata:
-        seed_everything(42)
+        seed_everything(args.seed)
     os.makedirs(args.output_folder, exist_ok=True)
     output_path = os.path.join(
         args.output_folder,
